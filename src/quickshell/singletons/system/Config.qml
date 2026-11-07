@@ -124,14 +124,6 @@ Item {
         dispatchWrite(next);
     }
 
-    function replaceSettings(settingsObj) {
-        if (!settingsObj || typeof settingsObj !== "object") return;
-        let next = JSON.parse(JSON.stringify(settingsObj));
-        if (areEqual(rawSettings, next)) return;
-        rawSettings = next;
-        dispatchWrite(next);
-    }
-
     function dispatchWrite(settingsObj) {
         if (isWriting) {
             pendingPayload = JSON.parse(JSON.stringify(settingsObj));

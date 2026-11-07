@@ -57,12 +57,50 @@ Item {
     readonly property int maxScrollIndex: Math.max(0, totalItemCount - effectiveItemCount)
 
     property int hoveredItemIndex: -1
+    property var hoveredButton: null
+    property string hoveredAppName: ""
+
+    readonly property bool canShowTooltip: {
+        if (!dockWindow.initialized || dockWindow.editMode || dockWindow.positionChanging) return false;
+        if (typeof DockAppMenuController !== "undefined" && DockAppMenuController.isVisible) return false;
+        return hoveredItemIndex >= 0 && hoveredButton !== null && hoveredAppName !== "";
+    }
+
+    property bool tooltipPillActive: false
+
+    Timer {
+        id: tooltipShowTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            if (containerRoot.canShowTooltip) {
+                containerRoot.tooltipPillActive = true;
+            }
+        }
+    }
+
+    onCanShowTooltipChanged: {
+        if (canShowTooltip) {
+            if (tooltipPill.opacity > 0.5) {
+                tooltipPillActive = true;
+            } else {
+                tooltipShowTimer.restart();
+            }
+        } else {
+            tooltipShowTimer.stop();
+            tooltipPillActive = false;
+        }
+    }
 
     Timer {
         id: hoverResetTimer
         interval: 80
         repeat: false
-        onTriggered: containerRoot.hoveredItemIndex = -1
+        onTriggered: {
+            containerRoot.hoveredItemIndex = -1;
+            containerRoot.hoveredButton = null;
+            containerRoot.hoveredAppName = "";
+        }
     }
 
     function checkHoverReset() {
@@ -107,9 +145,27 @@ Item {
         }
     }
 
-    property real itemSpacing: dockWindow.editMode ? dockWindow.s(10) : dockWindow.s(8)
+    property real itemSpacing: dockWindow.editMode ? dockWindow.s(10) : (dockWindow.dockAppTileBackground ? dockWindow.s(8) : 0)
     property real itemSize: dockWindow.s(dockWindow.dockElementSize)
     property real itemStep: itemSize + itemSpacing
+
+    // Menghitung kebutuhan ekstra lebar yang SINKRON 1-to-1 dengan pergeseran animSpread
+    readonly property real hoverExpansionLength: {
+        if (dockWindow.editMode || hoveredItemIndex < 0) return 0.0;
+        let delta = Math.max(0.0, dockWindow.dockHoverScaleMultiplier - 1.0);
+        if (delta <= 0.001) return 0.0;
+
+        let r0 = (delta * itemSize) / 2.0;
+        if (dockWindow.dockCascadeScale) {
+            let r1 = r0 * 0.45;
+            let r2 = r0 * 0.15;
+            // Total pertambahan lebar dock = 2x shift terluar (sisi kiri + sisi kanan)
+            let maxShiftOneSide = r0 + (2.0 * r1) + r2;
+            return Math.round(2.0 * maxShiftOneSide);
+        } else {
+            return Math.round(2.0 * r0);
+        }
+    }
 
     property real dockContentLength: {
         if (dockWindow.editMode) {
@@ -135,7 +191,7 @@ Item {
     property real dockThickness: itemSize
 
     property real fullThickness: dockThickness + dockWindow.s(16)
-    property real fullContentLength: dockContentLength + dockWindow.s(20)
+    property real fullContentLength: dockContentLength + dockWindow.s(20) + hoverExpansionLength
 
     property real baseWidth: Math.round(dockWindow.isVertical ? fullThickness : fullContentLength)
     property real baseHeight: Math.round(dockWindow.isVertical ? fullContentLength : fullThickness)
@@ -216,7 +272,7 @@ Item {
     HoverHandler {
         id: dockHover
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        margin: dockWindow.hoverExpansion
+        margin: dockWindow.effectiveHoverExpansion
         onHoveredChanged: {
             if (!hovered) {
                 containerRoot.hoveredItemIndex = -1;
@@ -366,8 +422,8 @@ Item {
             x: Math.round((containerRoot.width - width) / 2)
             y: Math.round((containerRoot.height - height) / 2)
 
-            width: dockWindow.isVertical ? Math.round(containerRoot.dockThickness + dockWindow.s(16) + dockWindow.hoverExpansion * 2) : containerRoot.dockContentLength
-            height: dockWindow.isVertical ? containerRoot.dockContentLength : Math.round(containerRoot.dockThickness + dockWindow.s(16) + dockWindow.hoverExpansion * 2)
+            width: dockWindow.isVertical ? Math.round(containerRoot.dockThickness + dockWindow.s(16) + dockWindow.hoverExpansion * 2) : Math.max(0, containerRoot.width - dockWindow.s(20))
+            height: dockWindow.isVertical ? Math.max(0, containerRoot.height - dockWindow.s(20)) : Math.round(containerRoot.dockThickness + dockWindow.s(16) + dockWindow.hoverExpansion * 2)
             clip: dockWindow.enableScrolling && (containerRoot.totalItemCount > containerRoot.effectiveItemCount)
             visible: width > 0 && height > 0
 
@@ -436,6 +492,53 @@ Item {
                     Layout.maximumHeight: visible ? -1 : 0
                     Layout.alignment: Qt.AlignCenter
 
+                    readonly property int itemIndex: dockWindow.dockAppsModel.count
+                    readonly property real maxHoverScale: dockWindow.dockHoverScaleMultiplier
+                    readonly property real hoverScaleDelta: Math.max(0.0, maxHoverScale - 1.0)
+                    readonly property int btnSize: dockWindow.s(dockWindow.dockElementSize)
+
+                    property real animSpread: {
+                        if (dockWindow.editMode || containerRoot.hoveredItemIndex < 0) return 0.0;
+                        let diff = itemIndex - containerRoot.hoveredItemIndex;
+                        if (diff === 0) return 0.0;
+                        let sign = diff > 0 ? 1.0 : -1.0;
+                        let d = Math.abs(diff);
+
+                        let r0 = (hoverScaleDelta * btnSize) / 2.0;
+                        if (r0 <= 0.001) return 0.0;
+
+                        if (dockWindow.dockCascadeScale) {
+                            let r1 = r0 * 0.45;
+                            let r2 = r0 * 0.15;
+                            let shift1 = r0 + r1;
+                            let shift2 = r0 + (2.0 * r1) + r2;
+                            let shift = (d === 1) ? shift1 : shift2;
+                            return sign * shift;
+                        } else {
+                            return sign * r0;
+                        }
+                    }
+
+                    property real targetOffsetX: !dockWindow.isVertical ? animSpread : 0.0
+                    property real targetOffsetY: dockWindow.isVertical ? animSpread : 0.0
+
+                    property real currentOffsetX: targetOffsetX
+                    property real currentOffsetY: targetOffsetY
+
+                    Behavior on currentOffsetX {
+                        enabled: dockWindow.initialized && !dockWindow.positionChanging
+                        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on currentOffsetY {
+                        enabled: dockWindow.initialized && !dockWindow.positionChanging
+                        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                    }
+
+                    transform: Translate {
+                        x: dockSeparator.currentOffsetX
+                        y: dockSeparator.currentOffsetY
+                    }
+
                     Rectangle {
                         anchors.centerIn: parent
                         width: dockWindow.isVertical ? Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.5) : 1
@@ -455,6 +558,112 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    Rectangle {
+        id: tooltipPill
+        z: 9999
+        visible: opacity > 0.001
+        enabled: false
+
+        readonly property real pillGap: dockWindow.s(10)
+
+        readonly property real btnCenterX: {
+            if (!containerRoot.hoveredButton) return containerRoot.width / 2;
+            return dockViewport.x + dockLayout.x + containerRoot.hoveredButton.x + (containerRoot.hoveredButton.width / 2) + containerRoot.hoveredButton.currentOffsetX;
+        }
+
+        readonly property real btnCenterY: {
+            if (!containerRoot.hoveredButton) return containerRoot.height / 2;
+            return dockViewport.y + dockLayout.y + containerRoot.hoveredButton.y + (containerRoot.hoveredButton.height / 2) + containerRoot.hoveredButton.currentOffsetY;
+        }
+
+        readonly property real curScale: {
+            if (!containerRoot.hoveredButton) return 1.0;
+            return (containerRoot.hoveredButton.visualScale !== undefined && containerRoot.hoveredButton.visualScale > 0)
+                ? containerRoot.hoveredButton.visualScale
+                : (containerRoot.hoveredButton.targetScale || 1.0);
+        }
+
+        readonly property real curBtnSize: containerRoot.hoveredButton ? containerRoot.hoveredButton.btnSize : dockWindow.s(dockWindow.dockElementSize)
+        readonly property real scaleSideExpansion: (curBtnSize * Math.max(0.0, curScale - 1.0)) / 2
+
+        property real targetX: {
+            if (dockWindow.isVertical) {
+                if (dockWindow.dockPosition === "left") {
+                    let slotRight = dockViewport.x + dockLayout.x + (containerRoot.hoveredButton ? containerRoot.hoveredButton.x : 0) + curBtnSize;
+                    let visualRight = slotRight + (containerRoot.hoveredButton ? containerRoot.hoveredButton.currentOffsetX : 0) + scaleSideExpansion;
+                    let effectiveRight = Math.max(containerRoot.width, visualRight);
+                    return effectiveRight + pillGap;
+                } else {
+                    let slotLeft = dockViewport.x + dockLayout.x + (containerRoot.hoveredButton ? containerRoot.hoveredButton.x : 0);
+                    let visualLeft = slotLeft + (containerRoot.hoveredButton ? containerRoot.hoveredButton.currentOffsetX : 0) - scaleSideExpansion;
+                    let effectiveLeft = Math.min(0, visualLeft);
+                    return effectiveLeft - width - pillGap;
+                }
+            }
+            let rawX = btnCenterX - (width / 2);
+            let minX = -containerRoot.x + dockWindow.s(12);
+            let maxX = dockWindow.effectiveWindowWidth - containerRoot.x - width - dockWindow.s(12);
+            return Math.max(minX, Math.min(maxX, rawX));
+        }
+
+        property real targetY: {
+            if (dockWindow.isVertical) {
+                let rawY = btnCenterY - (height / 2);
+                let minY = -containerRoot.y + dockWindow.s(12);
+                let maxY = dockWindow.effectiveWindowHeight - containerRoot.y - height - dockWindow.s(12);
+                return Math.max(minY, Math.min(maxY, rawY));
+            }
+            if (dockWindow.dockPosition === "top") {
+                let slotBottom = dockViewport.y + dockLayout.y + (containerRoot.hoveredButton ? containerRoot.hoveredButton.y : 0) + curBtnSize;
+                let visualBottom = slotBottom + (containerRoot.hoveredButton ? containerRoot.hoveredButton.currentOffsetY : 0) + scaleSideExpansion;
+                let effectiveBottom = Math.max(containerRoot.height, visualBottom);
+                return effectiveBottom + pillGap;
+            } else {
+                let slotTop = dockViewport.y + dockLayout.y + (containerRoot.hoveredButton ? containerRoot.hoveredButton.y : 0);
+                let visualTop = slotTop + (containerRoot.hoveredButton ? containerRoot.hoveredButton.currentOffsetY : 0) - scaleSideExpansion;
+                let effectiveTop = Math.min(0, visualTop);
+                return effectiveTop - height - pillGap;
+            }
+        }
+
+        x: targetX
+        y: targetY
+
+        implicitWidth: Math.min(dockWindow.s(220), labelText.implicitWidth + dockWindow.s(22))
+        Behavior on implicitWidth {
+            NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+        }
+        implicitHeight: dockWindow.s(26)
+        radius: dockWindow.s(7)
+        color: Qt.alpha(ThemeBackend.mantle, 0.88)
+        border.width: 1
+        border.color: Qt.alpha(ThemeBackend.surface2, 0.5)
+
+        opacity: containerRoot.tooltipPillActive ? 1.0 : 0.0
+        scale: containerRoot.tooltipPillActive ? 1.0 : 0.90
+
+        Behavior on opacity {
+            NumberAnimation { duration: containerRoot.tooltipPillActive ? 150 : 100; easing.type: Easing.OutCubic }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: containerRoot.tooltipPillActive ? 150 : 100; easing.type: Easing.OutCubic }
+        }
+
+        Text {
+            id: labelText
+            anchors.centerIn: parent
+            text: containerRoot.hoveredAppName
+            color: ThemeBackend.text
+            font.family: ThemeBackend.fontFamily || "Inter"
+            font.pixelSize: dockWindow.s(12)
+            font.weight: Font.Medium
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            width: Math.min(implicitWidth, tooltipPill.width - dockWindow.s(16))
         }
     }
 }

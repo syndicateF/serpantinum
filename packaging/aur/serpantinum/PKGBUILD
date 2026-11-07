@@ -3,7 +3,7 @@ pkgver=2.2.10
 pkgrel=1
 pkgdesc='A shell for Wayland compositors built on Quickshell'
 arch=('x86_64')
-url='https://github.com/ilyamiro/serpantinum'
+url='https://github.com/syndicateF/serpantinum.git'
 license=('AGPL-3.0-only')
 depends=(
     'kitty' 'cava' 'zbar' 'tesseract' 'tesseract-data-eng' 'pavucontrol' 'alsa-utils'

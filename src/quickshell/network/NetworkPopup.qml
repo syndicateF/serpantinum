@@ -1524,31 +1524,12 @@ Item {
         anchors.fill: parent
         visible: popupWindowRoot.visible
         enabled: popupWindowRoot.visible
-        opacity: popupWindowRoot.exitOpacity * popupWindowRoot.easeOut(popupWindowRoot.animWin(popupWindowRoot.introState, 0.0, 0.12))
-        scale: (0.96 + 0.04 * popupWindowRoot.easeOut(popupWindowRoot.animWin(popupWindowRoot.introState, 0.0, 0.12))) * (0.97 + 0.03 * popupWindowRoot.exitOpacity)
-        transformOrigin: Item.Center
 
         Rectangle {
             anchors.fill: parent
             radius: ThemeBackend.borderRadius
-            color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity)
+            color: "transparent"
             clip: true
-
-            WallpaperBlur {
-                z: -1
-                anchors.fill: parent
-                topLeftRadius: parent.topLeftRadius
-                topRightRadius: parent.topRightRadius
-                bottomLeftRadius: parent.bottomLeftRadius
-                bottomRightRadius: parent.bottomRightRadius
-            }
-            layer.enabled: popupWindowRoot.visible && popupWindowRoot.introState > 0.001 && popupWindowRoot.introState < 0.999
-            layer.smooth: true
-            layer.effect: MultiEffect {
-                blurEnabled: true
-                blurMax: 12
-                blur: (1.0 - popupWindowRoot.easeOut(popupWindowRoot.animWin(popupWindowRoot.introState, 0.0, 0.40))) * 0.35
-            }
 
             Rectangle {
                 width: parent.width * 0.8; height: width; radius: width / 2

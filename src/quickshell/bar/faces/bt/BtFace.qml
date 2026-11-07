@@ -94,7 +94,7 @@ BarFaceBase {
 
         if (!enabled) {
             btStatus = "Off";
-            btIcon = "󰂲";
+            btIcon = "bluetooth-offline";
             btDevice = "Off";
             isConnected = false;
             return;
@@ -118,8 +118,8 @@ BarFaceBase {
             let iconType = connectedDev.icon || "";
             let typeLower = iconType.toLowerCase();
             let nameLower = name.toLowerCase();
-
-            let icon = "󰂯";
+//// nih gatau
+            let icon = " ";
             if (typeLower.indexOf("headset") !== -1 || typeLower.indexOf("headphone") !== -1 || nameLower.indexOf("headphone") !== -1 || nameLower.indexOf("buds") !== -1 || nameLower.indexOf("pods") !== -1) icon = "🎧";
             else if (typeLower.indexOf("audio") !== -1 || typeLower.indexOf("speaker") !== -1 || typeLower.indexOf("card") !== -1 || nameLower.indexOf("speaker") !== -1) icon = "📻";
             else if (typeLower.indexOf("phone") !== -1 || nameLower.indexOf("phone") !== -1 || nameLower.indexOf("iphone") !== -1 || nameLower.indexOf("android") !== -1) icon = "📱";
@@ -131,7 +131,7 @@ BarFaceBase {
             btDevice = name;
             isConnected = true;
         } else {
-            btIcon = "󰂯";
+            btIcon = "bluetooth-online";
             btDevice = "On";
             isConnected = false;
         }
@@ -219,7 +219,7 @@ BarFaceBase {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         enabled: root.btStyle === "text" && !root.isPreview
-        onClicked: Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network bt"])
+        onClicked: PopupController.toggle("network", "bt")
     }
 
     AxisFlow {
@@ -235,19 +235,19 @@ BarFaceBase {
 
         Item {
             visible: root.showIcon
-            width: root.isVertical ? textIcon.implicitWidth : s(root.isCompact ? 18 : 20)
-            height: root.isVertical ? textIcon.implicitHeight : width
+            width: s(root.isCompact ? 18 : 20)
+            height: width
 
-            Text {
+             PanelIcon {
                 id: textIcon
                 anchors.centerIn: parent
-                text: root.btIcon
-                font.family: ThemeBackend.iconFont
-                font.pixelSize: s(root.isCompact ? 14 : 15)
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+                // text: root.btIcon
+                // font.family: ThemeBackend.iconFont
+                // font.pixelSize: s(root.isCompact ? 14 : 15)
+                // horizontalAlignment: Text.AlignHCenter
+                // verticalAlignment: Text.AlignVCenter
                 color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isBtOn ? ThemeBackend.mauve : ThemeBackend.subtext0)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
 
@@ -297,7 +297,7 @@ BarFaceBase {
             transform: Translate { y: btPill.initAnimTrigger ? 0 : s(15); Behavior on y { NumberAnimation { duration: 620; easing.type: Easing.OutQuint } } }
             Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network bt"])
+            onClicked: if (!root.isPreview) PopupController.toggle("network", "bt")
         }
     }
 
@@ -315,7 +315,7 @@ BarFaceBase {
             textFontSize: s(root.isCompact ? 9 : 10)
             accentColor: root.isBtOn ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
             textColor: root.isBtOn ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network bt"])
+            onClicked: if (!root.isPreview) PopupController.toggle("network", "bt")
         }
     }
 }

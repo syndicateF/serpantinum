@@ -31,6 +31,7 @@ PanelWindow {
         "elementSize": 44,
         "floating": false,
         "background": true,
+        "iconBackground": true,
         "exclusive": false,
         "autohide": false,
         "smartAutohide": true,
@@ -47,6 +48,7 @@ PanelWindow {
         "maxVisibleElements": 7,
         "maxElements": 7,
         "hoverScale": 120,
+        "hoverLift": 12,
         "cascadeScale": false,
         "focusRunning": true,
         "showRunningIndicators": true,
@@ -104,6 +106,20 @@ PanelWindow {
     property bool editMode: rawDockSettings.editing !== undefined ? rawDockSettings.editing : false
     property int rawElementSize: rawDockSettings.elementSize !== undefined ? rawDockSettings.elementSize : 44
     property bool overrideBoundsCorrection: rawDockSettings.overrideBoundsCorrection !== undefined ? Boolean(rawDockSettings.overrideBoundsCorrection) : false
+
+    property bool dockAppTileBackground: {
+        let val = undefined;
+        if (rawDockSettings) {
+            val = rawDockSettings.iconBackground !== undefined ? rawDockSettings.iconBackground : rawDockSettings.appTileBackground;
+        }
+        if (val === undefined && typeof Config !== "undefined" && Config.rawSettings) {
+            val = Config.rawSettings["dock.iconBackground"] !== undefined ? Config.rawSettings["dock.iconBackground"] : Config.rawSettings["dock.appTileBackground"];
+        }
+        if (val === undefined || val === null) return true;
+        if (typeof val === "boolean") return val;
+        if (typeof val === "string") return val.toLowerCase() === "true" || val === "1";
+        return Boolean(val);
+    }
 
     property bool dockExclusive: {
         let val = undefined;
@@ -242,6 +258,18 @@ PanelWindow {
         let parsed = parseFloat(val);
         if (isNaN(parsed) || parsed < 100) return 1.20;
         return parsed / 100.0;
+    }
+
+    property int dockHoverLift: {
+        let val = undefined;
+        if (rawDockSettings && rawDockSettings.hoverLift !== undefined) {
+            val = rawDockSettings.hoverLift;
+        } else if (typeof Config !== "undefined" && Config.rawSettings && Config.rawSettings["dock.hoverLift"] !== undefined) {
+            val = Config.rawSettings["dock.hoverLift"];
+        }
+        let parsed = parseInt(val);
+        if (isNaN(parsed) || parsed < 0) return 12;
+        return parsed;
     }
 
     property bool dockCascadeScale: {

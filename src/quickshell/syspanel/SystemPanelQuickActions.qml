@@ -180,7 +180,7 @@ Item {
 
             onRightClicked: {
                 view.panel.closeAnim.start();
-                Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "toggle", "settings", "display"]);
+                PopupController.toggle("settings", "display");
             }
         }
 
@@ -327,7 +327,7 @@ Item {
             }
             onRightClicked: {
                 view.panel.closeAnim.start();
-                Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "toggle", "network", "wifi"]);
+                PopupController.toggle("network", "wifi");
             }
         }
 
@@ -343,7 +343,7 @@ Item {
             }
             onRightClicked: {
                 view.panel.closeAnim.start();
-                Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "toggle", "network", "bt"]);
+                PopupController.toggle("network", "bt");
             }
         }
 

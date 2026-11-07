@@ -116,7 +116,7 @@ Item {
     function resetAndPlayIntro() {
         exitAnim.stop();
         startupComplete = false;
-        introMain = 0;
+        introMain = 1.0;
         introAmbient = 0;
         introClock = 0;
         introCalendar = 0;
@@ -144,7 +144,7 @@ Item {
             weatherTransitionAnim.stop();
             calendarTransitionAnim.stop();
             startupComplete = false;
-            introMain = 0;
+            introMain = 1.0;
             introAmbient = 0;
             introClock = 0;
             introCalendar = 0;
@@ -165,26 +165,24 @@ Item {
         PauseAnimation { duration: 20 }
 
         ParallelAnimation {
-            NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutQuart }
+            SequentialAnimation {
+                PauseAnimation { duration: 60 }
+                NumberAnimation { target: window; property: "introAmbient"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutSine }
+            }
+
+            SequentialAnimation {
+                PauseAnimation { duration: 100 }
+                NumberAnimation { target: window; property: "introClock"; from: 0; to: 1.0; duration: 500; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
+            }
 
             SequentialAnimation {
                 PauseAnimation { duration: 150 }
-                NumberAnimation { target: window; property: "introAmbient"; from: 0; to: 1.0; duration: 1000; easing.type: Easing.OutSine }
+                NumberAnimation { target: window; property: "introCalendar"; from: 0; to: 1.0; duration: 550; easing.type: Easing.OutQuint }
             }
 
             SequentialAnimation {
-                PauseAnimation { duration: 250 }
-                NumberAnimation { target: window; property: "introClock"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
-            }
-
-            SequentialAnimation {
-                PauseAnimation { duration: 400 }
-                NumberAnimation { target: window; property: "introCalendar"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuint }
-            }
-
-            SequentialAnimation {
-                PauseAnimation { duration: 400 }
-                NumberAnimation { target: window; property: "introWeather"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuint }
+                PauseAnimation { duration: 150 }
+                NumberAnimation { target: window; property: "introWeather"; from: 0; to: 1.0; duration: 550; easing.type: Easing.OutQuint }
             }
         }
         ScriptAction { script: window.startupComplete = true }
@@ -457,23 +455,12 @@ Item {
 
     Item {
         anchors.fill: parent
-        scale: 0.95 + (0.05 * introMain)
-        opacity: introMain
 
         Rectangle {
             anchors.fill: parent
             radius: ThemeBackend.borderRadius
-            color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity)
+            color: "transparent"
             clip: true
-
-            WallpaperBlur {
-                z: -1
-                anchors.fill: parent
-                topLeftRadius: parent.topLeftRadius
-                topRightRadius: parent.topRightRadius
-                bottomLeftRadius: parent.bottomLeftRadius
-                bottomRightRadius: parent.bottomRightRadius
-            }
 
             Rectangle {
                 width: parent.width * 0.5; height: width; radius: width / 2

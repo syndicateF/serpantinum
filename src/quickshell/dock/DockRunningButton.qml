@@ -36,6 +36,16 @@ Item {
     readonly property real maxHoverScale: dockWindow.dockHoverScaleMultiplier
     readonly property real hoverScaleDelta: Math.max(0.0, maxHoverScale - 1.0)
 
+    readonly property string appName: {
+        if (model && model.name && String(model.name).length > 0) return String(model.name);
+        if (model && model.title && String(model.title).length > 0) return String(model.title);
+        if (runningInfo && runningInfo.appId && String(runningInfo.appId).length > 0) return String(runningInfo.appId);
+        return "";
+    }
+
+    readonly property real visualScale: runningBtnShape.scale
+    readonly property real indicatorScaleOffset: (runningDockButton.btnSize * Math.max(0.0, runningBtnShape.scale - 1.0)) / 2
+
     property real baseHoverScale: {
         if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 1.0;
         let diff = Math.abs(runningDockButton.itemIndex - dockContainer.hoveredItemIndex);
@@ -61,19 +71,38 @@ Item {
         if (diff === 0) return 0.0;
         let sign = diff > 0 ? 1.0 : -1.0;
         let d = Math.abs(diff);
-        let maxAllowedShift = Math.min(dockWindow.s(10), runningDockButton.btnSize * hoverScaleDelta * 0.65);
+
+        // Pertambahan radius setengah-lebar dari icon yang membesar
+        let r0 = (hoverScaleDelta * btnSize) / 2.0;
+        if (r0 <= 0.001) return 0.0;
+
         if (dockWindow.dockCascadeScale) {
-            let shift = (d === 1) ? (maxAllowedShift * 0.70) : maxAllowedShift;
+            let r1 = r0 * 0.45;
+            let r2 = r0 * 0.15;
+            let shift1 = r0 + r1;
+            let shift2 = r0 + (2.0 * r1) + r2;
+            let shift = (d === 1) ? shift1 : shift2;
             return sign * shift;
         } else {
-            return (d === 1) ? (sign * maxAllowedShift * 0.45) : 0.0;
+            return sign * r0;
         }
     }
 
     property real animLift: {
-        if (!canHoverScale || targetScale <= 1.0) return 0.0;
+        if (!canHoverScale || dockContainer.hoveredItemIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
+        let maxLift = dockWindow.s(dockWindow.dockHoverLift);
+        if (maxHoverScale <= 1.001) {
+            let diff = Math.abs(runningDockButton.itemIndex - dockContainer.hoveredItemIndex);
+            if (diff === 0) return maxLift;
+            if (dockWindow.dockCascadeScale) {
+                if (diff === 1) return maxLift * 0.45;
+                if (diff === 2) return maxLift * 0.15;
+            }
+            return 0.0;
+        }
+        if (targetScale <= 1.0) return 0.0;
         let liftProgress = (targetScale - 1.0) / Math.max(0.01, maxHoverScale - 1.0);
-        return dockWindow.s(5) * Math.min(1.0, Math.max(0.0, liftProgress));
+        return maxLift * Math.min(1.0, Math.max(0.0, liftProgress));
     }
 
     property real targetOffsetX: {
@@ -117,13 +146,17 @@ Item {
             id: runningBtnShape
             anchors.fill: parent
             radius: runningDockButton.cornerRadius
-            clip: true
-            color: runningBtnGlass.active ? "transparent" : Qt.alpha(runningBtnMa.pressed ? Qt.darker(runningDockButton.btnColor, 1.12) : (runningBtnMa.containsMouse ? Qt.lighter(runningDockButton.btnColor, 1.12) : runningDockButton.btnColor), ThemeBackend.elementOpacity)
+            clip: dockWindow.dockAppTileBackground
+            color: !dockWindow.dockAppTileBackground ? "transparent" : (runningBtnGlass.active ? "transparent" : Qt.alpha(runningBtnMa.pressed ? Qt.darker(runningDockButton.btnColor, 1.12) : (runningBtnMa.containsMouse ? Qt.lighter(runningDockButton.btnColor, 1.12) : runningDockButton.btnColor), ThemeBackend.elementOpacity))
+
+            readonly property real iconPadding: dockWindow.dockAppTileBackground ? dockWindow.s(Math.round(dockWindow.dockElementSize * 0.14)) : dockWindow.s(2)
+            readonly property real indicatorMargin: (!dockWindow.dockAppTileBackground && dockWindow.showRunningIndicators) ? dockWindow.s(5) : iconPadding
 
             GlassFill {
                 id: runningBtnGlass
                 anchors.fill: parent
                 radius: parent.radius
+                visible: dockWindow.dockAppTileBackground
                 tintColor: runningDockButton.btnColor
                 tintAmount: 0.3
                 press: runningBtnMa.pressed ? 1 : Math.max(runningBtnMa.containsMouse ? 0.3 : 0, 0.3 * Math.max(0, Math.min(1, (runningDockButton.baseHoverScale - 1.0) / Math.max(0.01, runningDockButton.hoverScaleDelta))))
@@ -140,12 +173,19 @@ Item {
             Image {
                 id: runningAppIcon
                 anchors.fill: parent
-                anchors.margins: dockWindow.s(Math.round(dockWindow.dockElementSize * 0.14))
+                anchors.margins: runningBtnShape.iconPadding
+                anchors.bottomMargin: dockWindow.dockPosition === "bottom" ? runningBtnShape.indicatorMargin : runningBtnShape.iconPadding
+                anchors.topMargin: dockWindow.dockPosition === "top" ? runningBtnShape.indicatorMargin : runningBtnShape.iconPadding
+                anchors.leftMargin: dockWindow.dockPosition === "left" ? runningBtnShape.indicatorMargin : runningBtnShape.iconPadding
+                anchors.rightMargin: dockWindow.dockPosition === "right" ? runningBtnShape.indicatorMargin : runningBtnShape.iconPadding
+                sourceSize: Qt.size(dockWindow.s(dockWindow.dockElementSize * 2), dockWindow.s(dockWindow.dockElementSize * 2))
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 smooth: true
                 mipmap: true
                 property bool failedLoad: false
+                opacity: (!dockWindow.dockAppTileBackground && runningBtnMa.pressed) ? 0.75 : 1.0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
                 visible: source !== "" && status === Image.Ready && !failedLoad
 
                 source: {
@@ -164,7 +204,7 @@ Item {
                 visible: runningAppIcon.source === "" || runningAppIcon.failedLoad || runningAppIcon.status === Image.Error
                 text: model.name ? model.name.charAt(0).toUpperCase() : "?"
                 font.family: ThemeBackend.fontFamily
-                font.pixelSize: dockWindow.s(Math.round(dockWindow.dockElementSize * 0.42))
+                font.pixelSize: dockWindow.s(Math.round(dockWindow.dockElementSize * (dockWindow.dockAppTileBackground ? 0.42 : 0.62)))
                 font.weight: Font.Bold
                 color: ThemeBackend.text
             }
@@ -173,6 +213,7 @@ Item {
                 anchors.fill: parent
                 radius: runningDockButton.cornerRadius
                 color: "#ffffff"
+                visible: dockWindow.dockAppTileBackground
                 opacity: runningDockButton.flashOpacity
                 PropertyAnimation on opacity {
                     id: runningBtnFlashAnim
@@ -203,6 +244,19 @@ Item {
 
             width: dockWindow.isVertical ? dockWindow.s(4) : runningRow.implicitWidth
             height: dockWindow.isVertical ? runningCol.implicitHeight : dockWindow.s(4)
+
+            transform: Translate {
+                x: {
+                    if (dockWindow.dockPosition === "left") return -runningDockButton.indicatorScaleOffset;
+                    if (dockWindow.dockPosition === "right") return runningDockButton.indicatorScaleOffset;
+                    return 0;
+                }
+                y: {
+                    if (dockWindow.dockPosition === "bottom") return runningDockButton.indicatorScaleOffset;
+                    if (dockWindow.dockPosition === "top") return -runningDockButton.indicatorScaleOffset;
+                    return 0;
+                }
+            }
 
             Rectangle {
                 visible: runningDockButton.isOnlyElsewhere
@@ -270,6 +324,8 @@ Item {
                 dockContainer.cancelHoverReset();
                 if (runningDockButton.canHoverScale) {
                     dockContainer.hoveredItemIndex = runningDockButton.itemIndex;
+                    dockContainer.hoveredButton = runningDockButton;
+                    dockContainer.hoveredAppName = runningDockButton.appName;
                 }
             }
 

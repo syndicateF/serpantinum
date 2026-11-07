@@ -9,6 +9,7 @@ import Quickshell.Bluetooth
 import Quickshell.Networking
 import "WindowRegistry.js" as Registry
 import "notifications" as Notifs
+import "reusables"
 
 PanelWindow {
     id: masterWindow
@@ -76,6 +77,16 @@ PanelWindow {
         }
     }
 
+    Connections {
+        target: (typeof PopupController !== "undefined") ? PopupController : null
+        function onCommandRequested(cmd, targetWidget, arg) {
+            masterWindow.executeCommand(cmd, targetWidget, arg);
+        }
+        function onCloseRequested() {
+            masterWindow.switchWidget("hidden", "");
+        }
+    }
+
     IpcHandler {
         target: "main"
 
@@ -84,121 +95,128 @@ PanelWindow {
         }
 
         function clearNotifications(): void {
-            NotificationManager.clearNotifications();
+            if (typeof PopupController !== "undefined") PopupController.clearNotifications();
+            else NotificationManager.clearNotifications();
         }
 
         function embeddedSettings(action: string, tab: string): void {
-            masterWindow.handleEmbeddedSettings(action || "toggle", tab || "");
+            if (typeof PopupController !== "undefined") PopupController.handleCommand(action || "toggle", "settings", tab || "");
+            else masterWindow.handleEmbeddedSettings(action || "toggle", tab || "");
         }
 
         function handleCommand(cmd: string, targetWidget: string, arg: string): void {
-            cmd = cmd || "";
-            targetWidget = targetWidget || "";
-            arg = arg || "";
+            if (typeof PopupController !== "undefined") PopupController.handleCommand(cmd || "", targetWidget || "", arg || "");
+            else masterWindow.executeCommand(cmd || "", targetWidget || "", arg || "");
+        }
+    }
 
-            if (cmd === "notifications" && targetWidget === "clear") {
-                NotificationManager.clearNotifications();
-                return;
+    function executeCommand(cmd, targetWidget, arg) {
+        cmd = cmd || "";
+        targetWidget = targetWidget || "";
+        arg = arg || "";
+
+        if (cmd === "notifications" && targetWidget === "clear") {
+            NotificationManager.clearNotifications();
+            return;
+        }
+
+        let isSettingsCmd = cmd === "settings" || targetWidget === "settings";
+        let isGuideCmd = cmd === "guide" || targetWidget === "guide";
+        if (isSettingsCmd || isGuideCmd) {
+            if (isGuideCmd) {
+                console.warn("'guide' is deprecated, use 'settings' instead");
             }
+            let settingsAction = cmd === "close" ? "close" : (cmd === "open" ? "open" : "toggle");
+            let settingsTab = (cmd === "settings" || cmd === "guide") ? targetWidget : arg;
+            if (settingsTab === "settings" || settingsTab === "guide") settingsTab = "";
+            masterWindow.handleEmbeddedSettings(settingsAction, settingsTab);
+            return;
+        }
 
-            let isSettingsCmd = cmd === "settings" || targetWidget === "settings";
-            let isGuideCmd = cmd === "guide" || targetWidget === "guide";
-            if (isSettingsCmd || isGuideCmd) {
-                if (isGuideCmd) {
-                    console.warn("'guide' is deprecated, use 'settings' instead");
-                }
-                let settingsAction = cmd === "close" ? "close" : (cmd === "open" ? "open" : "toggle");
-                let settingsTab = (cmd === "settings" || cmd === "guide") ? targetWidget : arg;
-                if (settingsTab === "settings" || settingsTab === "guide") settingsTab = "";
-                masterWindow.handleEmbeddedSettings(settingsAction, settingsTab);
-                return;
-            }
-
-            if (cmd === "launcher" || targetWidget === "launcher") {
-                if (cmd === "close") {
-                    LauncherController.hide();
-                } else if (cmd === "open") {
-                    ClipboardController.hide();
-                    LauncherController.show();
-                } else {
-                    ClipboardController.hide();
-                    LauncherController.toggle();
-                }
-                return;
-            }
-
-            if (cmd === "clipboard" || targetWidget === "clipboard" || cmd === "clip" || targetWidget === "clip") {
-                if (cmd === "close") {
-                    ClipboardController.hide();
-                } else if (cmd === "open") {
-                    LauncherController.hide();
-                    ClipboardController.show();
-                } else {
-                    LauncherController.hide();
-                    ClipboardController.toggle();
-                }
-                return;
-            }
-
-            if (cmd === "network" && targetWidget === "airplane") {
-                let isAirplane = !Networking.wifiEnabled && !(Bluetooth.defaultAdapter && Bluetooth.defaultAdapter.enabled);
-                if (isAirplane) {
-                    Networking.wifiEnabled = true;
-                    if (Bluetooth.defaultAdapter) Bluetooth.defaultAdapter.enabled = true;
-                } else {
-                    Networking.wifiEnabled = false;
-                    if (Bluetooth.defaultAdapter) Bluetooth.defaultAdapter.enabled = false;
-                }
-                return;
-            }
-
-            if (cmd === "bar" && targetWidget === "autohide") {
-                let bar = Config.getSetting("bar", {});
-                bar.autohide = !bar.autohide;
-                Config.setSetting("bar", bar);
-                return;
-            }
-
-            let effectivelyActive = masterWindow.targetActive;
-
+        if (cmd === "launcher" || targetWidget === "launcher") {
             if (cmd === "close") {
-                if (typeof DockAppMenuController !== "undefined") {
-                    DockAppMenuController.hide();
-                }
-                switchWidget("hidden", "");
-            } else if (cmd === "toggle" || cmd === "open") {
-                if (targetWidget === effectivelyActive) {
-                    let currentItem = widgetCache[targetWidget] || widgetStack.currentItem;
+                LauncherController.hide();
+            } else if (cmd === "open") {
+                ClipboardController.hide();
+                LauncherController.show();
+            } else {
+                ClipboardController.hide();
+                LauncherController.toggle();
+            }
+            return;
+        }
 
-                    if (arg !== "" && arg !== masterWindow.activeArg) {
-                        masterWindow.activeArg = arg;
-                        if (currentItem && currentItem.activeMode !== undefined) {
-                            currentItem.activeMode = arg;
-                        }
-                        if (currentItem && currentItem.gotoTab !== undefined) {
-                            currentItem.gotoTab(arg);
-                        }
-                    } else if (cmd === "toggle") {
-                        switchWidget("hidden", "");
-                    }
-                } else if (getLayout(targetWidget)) {
-                    switchWidget(targetWidget, arg);
-                }
-            } else if (getLayout(cmd)) {
-                let legacyArg = targetWidget;
+        if (cmd === "clipboard" || targetWidget === "clipboard" || cmd === "clip" || targetWidget === "clip") {
+            if (cmd === "close") {
+                ClipboardController.hide();
+            } else if (cmd === "open") {
+                LauncherController.hide();
+                ClipboardController.show();
+            } else {
+                LauncherController.hide();
+                ClipboardController.toggle();
+            }
+            return;
+        }
 
-                if (cmd === effectivelyActive) {
-                    let currentItem = widgetCache[cmd] || widgetStack.currentItem;
-                    if (legacyArg !== "" && currentItem && currentItem.activeMode !== undefined && currentItem.activeMode !== legacyArg) {
-                        currentItem.activeMode = legacyArg;
-                    } else if (legacyArg !== "" && currentItem && currentItem.gotoTab !== undefined) {
-                        currentItem.gotoTab(legacyArg);
-                    } else {
-                        switchWidget("hidden", "");
+        if (cmd === "network" && targetWidget === "airplane") {
+            let isAirplane = !Networking.wifiEnabled && !(Bluetooth.defaultAdapter && Bluetooth.defaultAdapter.enabled);
+            if (isAirplane) {
+                Networking.wifiEnabled = true;
+                if (Bluetooth.defaultAdapter) Bluetooth.defaultAdapter.enabled = true;
+            } else {
+                Networking.wifiEnabled = false;
+                if (Bluetooth.defaultAdapter) Bluetooth.defaultAdapter.enabled = false;
+            }
+            return;
+        }
+
+        if (cmd === "bar" && targetWidget === "autohide") {
+            let bar = Config.getSetting("bar", {});
+            bar.autohide = !bar.autohide;
+            Config.setSetting("bar", bar);
+            return;
+        }
+
+        let effectivelyActive = masterWindow.targetActive;
+
+        if (cmd === "close") {
+            if (typeof DockAppMenuController !== "undefined") {
+                DockAppMenuController.hide();
+            }
+            switchWidget("hidden", "");
+        } else if (cmd === "toggle" || cmd === "open") {
+            if (targetWidget === effectivelyActive) {
+                let currentItem = widgetCache[targetWidget] || widgetStack.currentItem;
+
+                if (arg !== "" && arg !== masterWindow.activeArg) {
+                    masterWindow.activeArg = arg;
+                    if (currentItem && currentItem.activeMode !== undefined) {
+                        currentItem.activeMode = arg;
                     }
+                    if (currentItem && currentItem.gotoTab !== undefined) {
+                        currentItem.gotoTab(arg);
+                    }
+                } else if (cmd === "toggle") {
+                    switchWidget("hidden", "");
+                }
+            } else if (getLayout(targetWidget)) {
+                switchWidget(targetWidget, arg);
+            }
+        } else if (getLayout(cmd)) {
+            let legacyArg = targetWidget;
+
+            if (cmd === effectivelyActive) {
+                let currentItem = widgetCache[cmd] || widgetStack.currentItem;
+                if (legacyArg !== "" && currentItem && currentItem.activeMode !== undefined && currentItem.activeMode !== legacyArg) {
+                    currentItem.activeMode = legacyArg;
+                } else if (legacyArg !== "" && currentItem && currentItem.gotoTab !== undefined) {
+                    currentItem.gotoTab(legacyArg);
                 } else {
-                    switchWidget(cmd, legacyArg);
+                    switchWidget("hidden", "");
                 }
+            } else {
+                switchWidget(cmd, legacyArg);
             }
         }
     }
@@ -279,49 +297,28 @@ PanelWindow {
         property string bp: masterWindow.barPosition
         property bool activeBar: !masterWindow.isBarEffectivelyHidden
 
-        property bool overlapTopLeft: masterWindow.currentActive !== "hidden" && masterWindow._animX < 10 && masterWindow._animY < barThickness
-        property bool overlapTopRight: masterWindow.currentActive !== "hidden" && (masterWindow._animX + masterWindow._animW) > (masterWindow.width - 10) && masterWindow._animY < barThickness
-        property bool overlapBottomLeft: masterWindow.currentActive !== "hidden" && masterWindow._animX < 10 && (masterWindow._animY + masterWindow._animH) > (masterWindow.height - barThickness)
-        property bool overlapBottomRight: masterWindow.currentActive !== "hidden" && (masterWindow._animX + masterWindow._animW) > (masterWindow.width - 10) && (masterWindow._animY + masterWindow._animH) > (masterWindow.height - barThickness)
-
         x: {
             if (!activeBar) return 0;
-            if (bp === "left") return 0;
             if (bp === "right") return masterWindow.width - barThickness;
-            if (overlapTopLeft && bp === "top") return masterWindow._animW;
-            if (overlapBottomLeft && bp === "bottom") return masterWindow._animW;
             return 0;
         }
 
         y: {
             if (!activeBar) return 0;
-            if (bp === "top") return 0;
             if (bp === "bottom") return masterWindow.height - barThickness;
-            if (overlapTopLeft && bp === "left") return masterWindow._animH;
-            if (overlapTopRight && bp === "right") return masterWindow._animH;
             return 0;
         }
 
         width: {
             if (!activeBar) return 0;
             if (bp === "left" || bp === "right") return barThickness;
-            let w = masterWindow.width;
-            if (overlapTopLeft && bp === "top") w -= masterWindow._animW;
-            if (overlapTopRight && bp === "top") w -= masterWindow._animW;
-            if (overlapBottomLeft && bp === "bottom") w -= masterWindow._animW;
-            if (overlapBottomRight && bp === "bottom") w -= masterWindow._animW;
-            return Math.max(0, w);
+            return masterWindow.width;
         }
 
         height: {
             if (!activeBar) return 0;
             if (bp === "top" || bp === "bottom") return barThickness;
-            let h = masterWindow.height;
-            if (overlapTopLeft && bp === "left") h -= masterWindow._animH;
-            if (overlapBottomLeft && bp === "left") h -= masterWindow._animH;
-            if (overlapTopRight && bp === "right") h -= masterWindow._animH;
-            if (overlapBottomRight && bp === "right") h -= masterWindow._animH;
-            return Math.max(0, h);
+            return masterWindow.height;
         }
     }
 
@@ -395,6 +392,10 @@ PanelWindow {
 
     onCurrentActiveChanged: {
         reportWidgetState();
+        if (typeof PopupController !== "undefined") {
+            PopupController.currentActive = currentActive;
+            PopupController.activeArg = activeArg;
+        }
     }
 
     onScreenChanged: {
@@ -419,9 +420,6 @@ PanelWindow {
     property real _animH: 1
     property real _animX: 0
     property real _animY: 0
-
-    property real _stageW: 1
-    property real _stageH: 1
 
     property real globalUiScale: 1.0
 
@@ -528,19 +526,31 @@ PanelWindow {
         return { x: x, y: t.ry, w: tw, h: th };
     }
 
+    property real targetXFinal: 0
+    property real targetYFinal: 0
+    property real targetWFinal: 0
+    property real targetHFinal: 0
+    property string pendingWidget: ""
+    property string pendingArg: ""
+
     onTargetLayoutChanged: {
-        if (!targetLayout || masterWindow.currentActive === "hidden" || !masterWindow.isVisible) return;
+        if (!targetLayout || masterWindow.currentActive === "hidden" || !masterWindow.isVisible || unifiedAnimation.running) return;
         if (!masterWindow.userMoved || !masterWindow.isCurrentDraggable) {
-            masterWindow._animX = targetLayout.x;
-            masterWindow._animY = targetLayout.y;
+            if (masterWindow._animX !== targetLayout.x || masterWindow._animY !== targetLayout.y ||
+                masterWindow._animW !== targetLayout.w || masterWindow._animH !== targetLayout.h) {
+                masterWindow.targetXFinal = targetLayout.x;
+                masterWindow.targetYFinal = targetLayout.y;
+                masterWindow.targetWFinal = targetLayout.w;
+                masterWindow.targetHFinal = targetLayout.h;
+                unifiedAnimation.restart();
+            }
         }
-        masterWindow._animW = targetLayout.w;
-        masterWindow._animH = targetLayout.h;
-        masterWindow._stageW = targetLayout.w;
-        masterWindow._stageH = targetLayout.h;
     }
 
     onIsVisibleChanged: {
+        if (typeof PopupController !== "undefined") {
+            PopupController.isVisible = isVisible;
+        }
         if (isVisible) {
             widgetStack.forceActiveFocus();
         } else if (currentActive === "hidden" && !delayedClear.running) {
@@ -589,10 +599,7 @@ PanelWindow {
 
         Item {
             id: contentStage
-            width: masterWindow._stageW
-            height: masterWindow._stageH
-            x: (animContainer.width - width) / 2
-            y: (animContainer.height - height) / 2
+            anchors.fill: parent
             transformOrigin: Item.Center
 
             scale: masterWindow.isVisible ? 1.0 : 0.96
@@ -614,45 +621,102 @@ PanelWindow {
 
             MouseArea { anchors.fill: parent }
 
-            StackView {
-                id: widgetStack
+            Rectangle {
+                id: morphingBgContainer
                 anchors.fill: parent
-                focus: true
+                radius: ThemeBackend.clampedBorderRadius
+                color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity)
+                border.color: Qt.alpha(ThemeBackend.surface0, 0.6)
+                border.width: 1
+                z: -1
 
-                replaceEnter: null
-                replaceExit: null
-                pushEnter: null
-                pushExit: null
-                popEnter: null
-                popExit: null
-
-                Keys.onEscapePressed: (event) => {
-                    switchWidget("hidden", "");
-                    event.accepted = true;
+                WallpaperBlur {
+                    z: -1
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: ThemeBackend.blurBackground
                 }
+            }
 
-                onCurrentItemChanged: {
-                    if (currentItem) currentItem.forceActiveFocus();
+            Item {
+                id: contentLayer
+                anchors.fill: parent
+                opacity: 1.0
+
+                StackView {
+                    id: widgetStack
+                    anchors.fill: parent
+                    focus: true
+
+                    replaceEnter: null
+                    replaceExit: null
+                    pushEnter: null
+                    pushExit: null
+                    popEnter: null
+                    popExit: null
+
+                    Keys.onEscapePressed: (event) => {
+                        switchWidget("hidden", "");
+                        event.accepted = true;
+                    }
+
+                    onCurrentItemChanged: {
+                        if (currentItem) currentItem.forceActiveFocus();
+                    }
                 }
             }
         }
+    }
 
-        Behavior on x {
-            enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+    ParallelAnimation {
+        id: unifiedAnimation
+
+        NumberAnimation { target: masterWindow; property: "_animW"; to: masterWindow.targetWFinal; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation { target: masterWindow; property: "_animH"; to: masterWindow.targetHFinal; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation { target: masterWindow; property: "_animX"; to: masterWindow.targetXFinal; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation { target: masterWindow; property: "_animY"; to: masterWindow.targetYFinal; duration: 320; easing.type: Easing.OutCubic }
+
+        SequentialAnimation {
+            NumberAnimation { target: contentLayer; property: "opacity"; from: 1.0; to: 0.0; duration: 110; easing.type: Easing.OutCubic }
+            ScriptAction {
+                script: {
+                    if (masterWindow.pendingWidget !== "") {
+                        masterWindow.executeContentSwap(masterWindow.pendingWidget, masterWindow.pendingArg);
+                        masterWindow.pendingWidget = "";
+                        masterWindow.pendingArg = "";
+                    }
+                }
+            }
+            NumberAnimation { target: contentLayer; property: "opacity"; from: 0.0; to: 1.0; duration: 210; easing.type: Easing.OutCubic }
         }
-        Behavior on y {
-            enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+    }
+
+    function executeContentSwap(newWidget, arg) {
+        masterWindow.currentActive = newWidget;
+        masterWindow.activeArg = arg;
+
+        let t = getLayout(newWidget);
+        if (!t) return;
+
+        let cachedItem = ensureWidgetItem(newWidget, t);
+        if (!cachedItem) return;
+
+        if (newWidget === "wallpaper" && cachedItem.widgetArg !== undefined) cachedItem.widgetArg = arg;
+        if (newWidget === "wallpaper" && cachedItem.refreshForDisplay !== undefined) cachedItem.refreshForDisplay();
+        if (arg !== "" && cachedItem.activeMode !== undefined) cachedItem.activeMode = arg;
+        if (arg !== "" && cachedItem.gotoTab !== undefined) cachedItem.gotoTab(arg);
+
+        if (widgetStack.currentItem !== cachedItem) {
+            widgetStack.replace(cachedItem, {}, StackView.Immediate);
         }
-        Behavior on width {
-            enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+
+        for (let k in widgetCache) {
+            let it = widgetCache[k];
+            if (it && it !== cachedItem) {
+                it.visible = false;
+            }
         }
-        Behavior on height {
-            enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
-        }
+        cachedItem.visible = true;
     }
 
     function switchWidget(newWidget, arg) {
@@ -674,6 +738,11 @@ PanelWindow {
         }
 
         if (newWidget === "hidden") {
+            unifiedAnimation.stop();
+            masterWindow.pendingWidget = "";
+            masterWindow.pendingArg = "";
+            contentLayer.opacity = 1.0;
+
             if (currentActive !== "hidden" && !masterWindow.isClosing) {
                 let closingGen = gen;
                 masterWindow.isClosing = true;
@@ -683,6 +752,8 @@ PanelWindow {
 
                 let finalizeClose = function() {
                     if (closingGen !== masterWindow.switchGeneration) return;
+                    unifiedAnimation.stop();
+                    contentLayer.opacity = 1.0;
                     masterWindow.isClosing = false;
                     masterWindow.currentActive = "hidden";
                     masterWindow.morphDuration = masterWindow.exitDuration;
@@ -749,55 +820,56 @@ PanelWindow {
 
         let isComingFromHidden = (!masterWindow.isVisible || widgetStack.currentItem === null || masterWindow.currentActive === "hidden");
 
-        masterWindow.currentActive = newWidget;
-        masterWindow.activeArg = arg;
-
         let finalW = (typeof cachedItem.targetMasterWidth === "number" && cachedItem.targetMasterWidth >= 50) ? cachedItem.targetMasterWidth : t.w;
         let finalH = (typeof cachedItem.targetMasterHeight === "number" && cachedItem.targetMasterHeight >= 50) ? cachedItem.targetMasterHeight : t.h;
         let finalX = (finalW !== t.w) ? recenterX(t, finalW) : t.rx;
         let finalY = t.ry;
 
-        if (!masterWindow.userMoved || !masterWindow.isCurrentDraggable) {
-            masterWindow._animX = finalX;
-            masterWindow._animY = finalY;
-        }
-        masterWindow._animW = finalW;
-        masterWindow._animH = finalH;
-        masterWindow._stageW = finalW;
-        masterWindow._stageH = finalH;
-
         if (isComingFromHidden) {
-            masterWindow.disableMorph = true;
-        } else {
-            masterWindow.morphDuration = masterWindow.morphDurationSwitch;
-            masterWindow.disableMorph = false;
-        }
+            unifiedAnimation.stop();
+            contentLayer.opacity = 1.0;
+            masterWindow.currentActive = newWidget;
+            masterWindow.activeArg = arg;
 
-        if (newWidget === "wallpaper" && cachedItem.widgetArg !== undefined) cachedItem.widgetArg = arg;
-        if (newWidget === "wallpaper" && cachedItem.refreshForDisplay !== undefined) cachedItem.refreshForDisplay();
-        if (arg !== "" && cachedItem.activeMode !== undefined) cachedItem.activeMode = arg;
-        if (arg !== "" && cachedItem.gotoTab !== undefined) cachedItem.gotoTab(arg);
-
-        if (widgetStack.currentItem !== cachedItem) {
-            widgetStack.replace(cachedItem, {}, StackView.Immediate);
-        }
-
-        for (let k in widgetCache) {
-            let it = widgetCache[k];
-            if (it && it !== cachedItem) {
-                it.visible = false;
+            if (!masterWindow.userMoved || !masterWindow.isCurrentDraggable) {
+                masterWindow._animX = finalX;
+                masterWindow._animY = finalY;
             }
-        }
-        cachedItem.visible = true;
+            masterWindow._animW = finalW;
+            masterWindow._animH = finalH;
 
-        masterWindow.isVisible = true;
+            if (newWidget === "wallpaper" && cachedItem.widgetArg !== undefined) cachedItem.widgetArg = arg;
+            if (newWidget === "wallpaper" && cachedItem.refreshForDisplay !== undefined) cachedItem.refreshForDisplay();
+            if (arg !== "" && cachedItem.activeMode !== undefined) cachedItem.activeMode = arg;
+            if (arg !== "" && cachedItem.gotoTab !== undefined) cachedItem.gotoTab(arg);
 
-        if (isComingFromHidden) {
-            Qt.callLater(function() {
-                if (gen === masterWindow.switchGeneration && masterWindow.isVisible && masterWindow.currentActive === newWidget) {
-                    masterWindow.disableMorph = false;
+            if (widgetStack.currentItem !== cachedItem) {
+                widgetStack.replace(cachedItem, {}, StackView.Immediate);
+            }
+
+            for (let k in widgetCache) {
+                let it = widgetCache[k];
+                if (it && it !== cachedItem) {
+                    it.visible = false;
                 }
-            });
+            }
+            cachedItem.visible = true;
+
+            masterWindow.isVisible = true;
+        } else {
+            // Unified Switch Transition: Morphing Move & Resize at the same time
+            unifiedAnimation.stop();
+
+            masterWindow.targetXFinal = finalX;
+            masterWindow.targetYFinal = finalY;
+            masterWindow.targetWFinal = finalW;
+            masterWindow.targetHFinal = finalH;
+
+            masterWindow.pendingWidget = newWidget;
+            masterWindow.pendingArg = arg;
+
+            unifiedAnimation.start();
+            masterWindow.isVisible = true;
         }
     }
 

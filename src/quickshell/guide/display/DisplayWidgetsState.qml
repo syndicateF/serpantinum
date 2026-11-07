@@ -522,7 +522,7 @@ GuideTab {
         if (rootObj && typeof rootObj.closePopup === "function") {
             rootObj.closePopup();
         } else {
-            Quickshell.execDetached(["bash", dir ? (dir + "/scripts/qs_manager.sh") : "qs_manager.sh", "close"]);
+            PopupController.close();
         }
     }
 

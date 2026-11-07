@@ -675,7 +675,6 @@ Item {
 
                 Dropdown {
                     id: modeDropdown
-                    boundsItem: orientedRoot
                     Layout.preferredWidth: root.s(150)
                     Layout.preferredHeight: root.s(32)
                     fuzzySearch: false
@@ -772,7 +771,6 @@ Item {
 
                     Dropdown {
                         id: convCategoryDropdown
-                        boundsItem: orientedRoot
                         Layout.fillWidth: true
                         Layout.preferredHeight: root.s(34)
                         fuzzySearch: false
@@ -825,7 +823,6 @@ Item {
 
                         Dropdown {
                             id: convFromDropdown
-                            boundsItem: orientedRoot
                             Layout.fillWidth: true
                             Layout.preferredHeight: root.s(34)
                             fuzzySearch: root.convCategory === "currency"
@@ -897,7 +894,6 @@ Item {
 
                         Dropdown {
                             id: convToDropdown
-                            boundsItem: orientedRoot
                             Layout.fillWidth: true
                             Layout.preferredHeight: root.s(34)
                             fuzzySearch: root.convCategory === "currency"

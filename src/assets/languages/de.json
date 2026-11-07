@@ -48,9 +48,7 @@
       "screenshot": "Screenshot",
       "theme_appearance": "Darstellung",
       "theme_apps": "App-Design",
-      "theme_wallpapers": "Hintergründe",
-      "general_main": "Allgemein",
-      "general_presets": "Voreinstellungen"
+      "theme_wallpapers": "Hintergründe"
     },
     "launcher": {
       "position": {
@@ -253,21 +251,6 @@
       "screenshot_on_release": {
         "title": "Bereich beim Loslassen der Maus erfassen",
         "desc": "Erstellt den Screenshot sofort nach dem Ziehen, ohne auf den Auslöser zu klicken"
-      },
-      "presets": {
-        "save": {
-          "title": "Aktuelles Setup speichern",
-          "desc": "Alle Einstellungen, Widgets und Hintergründe als Voreinstellung speichern",
-          "button": "Voreinstellung speichern"
-        },
-        "empty": "Noch keine Voreinstellungen. Speichere dein aktuelles Setup, um eine zu erstellen",
-        "confirm": {
-          "title": "Voreinstellung anwenden?",
-          "desc": "Möchtest du diese Voreinstellung wirklich anwenden, ohne zuerst deine eigenen Einstellungen zu speichern? Sie überschreibt deine aktuellen Einstellungen, die du dann nicht wiederherstellen kannst.",
-          "dont_show": "Nicht mehr anzeigen",
-          "apply": "Anwenden",
-          "cancel": "Abbrechen"
-        }
       }
     },
     "display": {

@@ -561,17 +561,7 @@ Item {
 
     property var tabsModel: [
         { id: "Welcome", key: "welcome", name: "Welcome", icon: "󰋜", file: "WelcomeTab.qml" },
-        {
-            id: "General",
-            key: "general",
-            name: "General",
-            icon: "󰒓",
-            file: "general/GeneralTab.qml",
-            subtabs: [
-                { id: "GeneralMain", key: "general_main", name: "General", icon: "󰒓", file: "general/GeneralTab.qml" },
-                { id: "GeneralPresets", key: "general_presets", name: "Presets", icon: "󰆓", file: "general/GeneralPresetsTab.qml" }
-            ]
-        },
+        { id: "General", key: "general", name: "General", icon: "󰒓", file: "general/GeneralTab.qml" },
         {
             id: "Display",
             key: "display",
@@ -643,7 +633,7 @@ Item {
         if (typeof masterWindow !== "undefined" && masterWindow.switchWidget) {
             masterWindow.switchWidget("hidden", "");
         } else {
-            Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "close"]);
+            PopupController.close();
         }
     }
 

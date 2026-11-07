@@ -226,8 +226,8 @@ Item {
                 activeColor: itemId === "caffeine" ? Qt.tint(ThemeBackend.peach, "#5c3016") : ThemeBackend.peach
                 onClicked: {
                     if (root.isPreview) return;
-                    if (itemId === "settings") Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle settings"]);
-                    else if (itemId === "launcher") Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle launcher"]);
+                    if (itemId === "settings") PopupController.toggle("settings");
+                    else if (itemId === "launcher") LauncherController.toggle();
                     else if (itemId === "nightlight") root.toggleNightLight();
                     else if (itemId === "caffeine") root.setCaffeine(!root.caffeineActive);
                     else if (itemId === "shuffle") root.shuffleWallpaper(menuItem);

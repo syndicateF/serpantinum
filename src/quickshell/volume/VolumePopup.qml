@@ -36,7 +36,7 @@ Item {
 
     function resetAndPlayIntro() {
         exitAnim.stop();
-        introMain = 0;
+        introMain = 1.0;
         introHeader = 0;
         introContent = 0;
         introAnim.restart();
@@ -57,7 +57,7 @@ Item {
         } else {
             introAnim.stop();
             exitAnim.stop();
-            introMain = 0;
+            introMain = 1.0;
             introHeader = 0;
             introContent = 0;
         }
@@ -139,21 +139,20 @@ Item {
         return "󰓃";
     }
 
-    property real introMain: 0
+    property real introMain: 1.0
     property real introHeader: 0
     property real introContent: 0
 
     ParallelAnimation {
         id: introAnim
         running: false
-        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutExpo }
         SequentialAnimation {
-            PauseAnimation { duration: 100 }
-            NumberAnimation { target: window; property: "introHeader"; from: 0; to: 1.0; duration: 700; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+            PauseAnimation { duration: 60 }
+            NumberAnimation { target: window; property: "introHeader"; from: 0; to: 1.0; duration: 400; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
         }
         SequentialAnimation {
-            PauseAnimation { duration: 250 }
-            NumberAnimation { target: window; property: "introContent"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutExpo }
+            PauseAnimation { duration: 120 }
+            NumberAnimation { target: window; property: "introContent"; from: 0; to: 1.0; duration: 450; easing.type: Easing.OutExpo }
         }
     }
 
@@ -184,24 +183,12 @@ Item {
 
     Item {
         anchors.fill: parent
-        scale: 0.95 + (0.05 * introMain)
-        opacity: introMain
-        transform: Translate { y: window.s(20) * (1 - introMain) }
 
         Rectangle {
             anchors.fill: parent
             radius: ThemeBackend.borderRadius
-            color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity)
+            color: "transparent"
             clip: true
-
-            WallpaperBlur {
-                z: -1
-                anchors.fill: parent
-                topLeftRadius: parent.topLeftRadius
-                topRightRadius: parent.topRightRadius
-                bottomLeftRadius: parent.bottomLeftRadius
-                bottomRightRadius: parent.bottomRightRadius
-            }
 
             ColumnLayout {
                 anchors.fill: parent

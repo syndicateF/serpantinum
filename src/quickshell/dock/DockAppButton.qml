@@ -37,6 +37,16 @@ Item {
     readonly property real maxHoverScale: dockWindow.dockHoverScaleMultiplier
     readonly property real hoverScaleDelta: Math.max(0.0, maxHoverScale - 1.0)
 
+    readonly property string appName: {
+        if (model && model.name && String(model.name).length > 0) return String(model.name);
+        if (model && model.title && String(model.title).length > 0) return String(model.title);
+        if (info && info.appId && String(info.appId).length > 0) return String(info.appId);
+        return "";
+    }
+
+    readonly property real visualScale: btnShape.scale
+    readonly property real indicatorScaleOffset: (dockButton.btnSize * Math.max(0.0, btnShape.scale - 1.0)) / 2
+
     property real baseHoverScale: {
         if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 1.0;
         let diff = Math.abs(dockButton.itemIndex - dockContainer.hoveredItemIndex);
@@ -62,19 +72,38 @@ Item {
         if (diff === 0) return 0.0;
         let sign = diff > 0 ? 1.0 : -1.0;
         let d = Math.abs(diff);
-        let maxAllowedShift = Math.min(dockWindow.s(10), dockButton.btnSize * hoverScaleDelta * 0.65);
+
+        // Pertambahan radius setengah-lebar dari icon yang membesar
+        let r0 = (hoverScaleDelta * btnSize) / 2.0;
+        if (r0 <= 0.001) return 0.0;
+
         if (dockWindow.dockCascadeScale) {
-            let shift = (d === 1) ? (maxAllowedShift * 0.70) : maxAllowedShift;
+            let r1 = r0 * 0.45;
+            let r2 = r0 * 0.15;
+            let shift1 = r0 + r1;
+            let shift2 = r0 + (2.0 * r1) + r2;
+            let shift = (d === 1) ? shift1 : shift2;
             return sign * shift;
         } else {
-            return (d === 1) ? (sign * maxAllowedShift * 0.45) : 0.0;
+            return sign * r0;
         }
     }
 
     property real animLift: {
-        if (!canHoverScale || targetScale <= 1.0) return 0.0;
+        if (!canHoverScale || dockContainer.hoveredItemIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
+        let maxLift = dockWindow.s(dockWindow.dockHoverLift);
+        if (maxHoverScale <= 1.001) {
+            let diff = Math.abs(dockButton.itemIndex - dockContainer.hoveredItemIndex);
+            if (diff === 0) return maxLift;
+            if (dockWindow.dockCascadeScale) {
+                if (diff === 1) return maxLift * 0.45;
+                if (diff === 2) return maxLift * 0.15;
+            }
+            return 0.0;
+        }
+        if (targetScale <= 1.0) return 0.0;
         let liftProgress = (targetScale - 1.0) / Math.max(0.01, maxHoverScale - 1.0);
-        return dockWindow.s(5) * Math.min(1.0, Math.max(0.0, liftProgress));
+        return maxLift * Math.min(1.0, Math.max(0.0, liftProgress));
     }
 
     property real targetOffsetX: {
@@ -88,15 +117,10 @@ Item {
     }
 
     property real targetOffsetY: {
-        if (dockWindow.isVertical) {
-            if (dockWindow.dockPosition === "top") return animLift;
-            if (dockWindow.dockPosition === "bottom") return -animLift;
-            return 0.0;
-        } else {
-            if (dockWindow.dockPosition === "bottom") return -animLift;
-            if (dockWindow.dockPosition === "top") return animLift;
-            return 0.0;
-        }
+        if (dockWindow.isVertical) return animSpread;
+        if (dockWindow.dockPosition === "bottom") return -animLift;
+        if (dockWindow.dockPosition === "top") return animLift;
+        return 0.0;
     }
 
     property real currentOffsetX: btnMa.drag.active ? 0 : targetOffsetX
@@ -166,8 +190,11 @@ Item {
             id: btnShape
             anchors.fill: parent
             radius: dockButton.cornerRadius
-            clip: true
-            color: dockBtnGlass.active ? "transparent" : Qt.alpha(btnMa.pressed ? Qt.darker(dockButton.btnColor, 1.12) : (btnMa.containsMouse ? Qt.lighter(dockButton.btnColor, 1.12) : dockButton.btnColor), ThemeBackend.elementOpacity)
+            clip: dockWindow.dockAppTileBackground
+            color: !dockWindow.dockAppTileBackground ? "transparent" : (dockBtnGlass.active ? "transparent" : Qt.alpha(btnMa.pressed ? Qt.darker(dockButton.btnColor, 1.12) : (btnMa.containsMouse ? Qt.lighter(dockButton.btnColor, 1.12) : dockButton.btnColor), ThemeBackend.elementOpacity))
+
+            readonly property real iconPadding: dockWindow.dockAppTileBackground ? dockWindow.s(Math.round(dockWindow.dockElementSize * 0.14)) : dockWindow.s(2)
+            readonly property real indicatorMargin: (!dockWindow.dockAppTileBackground && dockWindow.showRunningIndicators) ? dockWindow.s(5) : iconPadding
 
             Behavior on color {
                 ColorAnimation { duration: 150 }
@@ -177,6 +204,7 @@ Item {
                 id: dockBtnGlass
                 anchors.fill: parent
                 radius: parent.radius
+                visible: dockWindow.dockAppTileBackground
                 tintColor: dockButton.btnColor
                 tintAmount: 0.3
                 press: btnMa.pressed ? 1 : Math.max(btnMa.containsMouse ? 0.3 : 0, 0.3 * Math.max(0, Math.min(1, (dockButton.baseHoverScale - 1.0) / Math.max(0.01, dockButton.hoverScaleDelta))))
@@ -199,12 +227,19 @@ Item {
             Image {
                 id: appIcon
                 anchors.fill: parent
-                anchors.margins: dockWindow.s(Math.round(dockWindow.dockElementSize * 0.14))
+                anchors.margins: btnShape.iconPadding
+                anchors.bottomMargin: dockWindow.dockPosition === "bottom" ? btnShape.indicatorMargin : btnShape.iconPadding
+                anchors.topMargin: dockWindow.dockPosition === "top" ? btnShape.indicatorMargin : btnShape.iconPadding
+                anchors.leftMargin: dockWindow.dockPosition === "left" ? btnShape.indicatorMargin : btnShape.iconPadding
+                anchors.rightMargin: dockWindow.dockPosition === "right" ? btnShape.indicatorMargin : btnShape.iconPadding
+                sourceSize: Qt.size(dockWindow.s(dockWindow.dockElementSize * 2), dockWindow.s(dockWindow.dockElementSize * 2))
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 smooth: true
                 mipmap: true
                 property bool failedLoad: false
+                opacity: (!dockWindow.dockAppTileBackground && btnMa.pressed) ? 0.75 : 1.0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
 
                 visible: source !== "" && status === Image.Ready && !failedLoad
 
@@ -227,7 +262,7 @@ Item {
                 visible: appIcon.source === "" || appIcon.failedLoad || appIcon.status === Image.Error
                 text: model.name ? model.name.charAt(0).toUpperCase() : "?"
                 font.family: ThemeBackend.fontFamily
-                font.pixelSize: dockWindow.s(Math.round(dockWindow.dockElementSize * 0.42))
+                font.pixelSize: dockWindow.s(Math.round(dockWindow.dockElementSize * (dockWindow.dockAppTileBackground ? 0.42 : 0.62)))
                 font.weight: Font.Bold
                 color: ThemeBackend.text
             }
@@ -236,6 +271,7 @@ Item {
                 anchors.fill: parent
                 radius: dockButton.cornerRadius
                 color: "#ffffff"
+                visible: dockWindow.dockAppTileBackground
                 opacity: dockButton.flashOpacity
                 PropertyAnimation on opacity {
                     id: btnFlashAnim
@@ -269,6 +305,19 @@ Item {
 
             width: dockWindow.isVertical ? dockWindow.s(4) : contentRow.implicitWidth
             height: dockWindow.isVertical ? contentCol.implicitHeight : dockWindow.s(4)
+
+            transform: Translate {
+                x: {
+                    if (dockWindow.dockPosition === "left") return -dockButton.indicatorScaleOffset;
+                    if (dockWindow.dockPosition === "right") return dockButton.indicatorScaleOffset;
+                    return 0;
+                }
+                y: {
+                    if (dockWindow.dockPosition === "bottom") return dockButton.indicatorScaleOffset;
+                    if (dockWindow.dockPosition === "top") return -dockButton.indicatorScaleOffset;
+                    return 0;
+                }
+            }
 
             Rectangle {
                 id: elsewhereRing
@@ -350,6 +399,8 @@ Item {
                 dockContainer.cancelHoverReset();
                 if (dockButton.canHoverScale) {
                     dockContainer.hoveredItemIndex = dockButton.itemIndex;
+                    dockContainer.hoveredButton = dockButton;
+                    dockContainer.hoveredAppName = dockButton.appName;
                 }
             }
 

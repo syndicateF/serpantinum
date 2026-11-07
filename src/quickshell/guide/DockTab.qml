@@ -16,6 +16,7 @@ GuideTab {
         "elementSize": 44,
         "floating": false,
         "background": true,
+        "iconBackground": true,
         "exclusive": false,
         "autohide": false,
         "smartAutohide": true,
@@ -29,6 +30,7 @@ GuideTab {
         "enableScrolling": false,
         "visibleElements": 7,
         "hoverScale": 120,
+        "hoverLift": 12,
         "cascadeScale": false,
         "focusRunning": true,
         "showRunningIndicators": true,
@@ -49,11 +51,13 @@ GuideTab {
     property string currentPosition: dockSettings && dockSettings.position !== undefined ? dockSettings.position : "bottom"
     property bool currentOnTop: dockSettings && dockSettings.onTop !== undefined ? Boolean(dockSettings.onTop) : true
     property bool currentBackground: dockSettings && dockSettings.background !== undefined ? Boolean(dockSettings.background) : true
+    property bool currentIconBackground: dockSettings && (dockSettings.iconBackground !== undefined ? Boolean(dockSettings.iconBackground) : (dockSettings.appTileBackground !== undefined ? Boolean(dockSettings.appTileBackground) : true))
     property bool currentFloating: dockSettings && dockSettings.floating !== undefined ? dockSettings.floating : false
     property bool currentExclusive: dockSettings && (dockSettings.exclusive !== undefined ? dockSettings.exclusive : (dockSettings.exclusiveMode !== undefined ? dockSettings.exclusiveMode : false)) ? true : false
     property int currentElementSize: (dockSettings && dockSettings.elementSize !== undefined && !isNaN(parseInt(dockSettings.elementSize))) ? parseInt(dockSettings.elementSize) : 44
     property bool currentOverrideBoundsCorrection: dockSettings && dockSettings.overrideBoundsCorrection !== undefined ? dockSettings.overrideBoundsCorrection : false
     property int currentHoverScale: (dockSettings && dockSettings.hoverScale !== undefined && !isNaN(parseInt(dockSettings.hoverScale))) ? parseInt(dockSettings.hoverScale) : 120
+    property int currentHoverLift: (dockSettings && dockSettings.hoverLift !== undefined && !isNaN(parseInt(dockSettings.hoverLift))) ? parseInt(dockSettings.hoverLift) : 12
     property bool currentCascadeScale: dockSettings && dockSettings.cascadeScale !== undefined ? Boolean(dockSettings.cascadeScale) : false
     property bool currentEnableScrolling: dockSettings && dockSettings.enableScrolling !== undefined ? dockSettings.enableScrolling : false
     property int currentVisibleElements: (dockSettings && dockSettings.visibleElements !== undefined && !isNaN(parseInt(dockSettings.visibleElements)) && parseInt(dockSettings.visibleElements) > 0) ? parseInt(dockSettings.visibleElements) : 7
@@ -76,11 +80,13 @@ GuideTab {
         dockTabRoot.currentPosition = s.position !== undefined ? s.position : "bottom";
         dockTabRoot.currentOnTop = s.onTop !== undefined ? Boolean(s.onTop) : true;
         dockTabRoot.currentBackground = s.background !== undefined ? Boolean(s.background) : true;
+        dockTabRoot.currentIconBackground = s && (s.iconBackground !== undefined ? Boolean(s.iconBackground) : (s.appTileBackground !== undefined ? Boolean(s.appTileBackground) : true));
         dockTabRoot.currentFloating = s.floating !== undefined ? s.floating : false;
         dockTabRoot.currentExclusive = s.exclusive !== undefined ? s.exclusive : (s.exclusiveMode !== undefined ? Boolean(s.exclusiveMode) : false);
         dockTabRoot.currentElementSize = (s.elementSize !== undefined && !isNaN(parseInt(s.elementSize))) ? parseInt(s.elementSize) : 44;
         dockTabRoot.currentOverrideBoundsCorrection = s.overrideBoundsCorrection !== undefined ? s.overrideBoundsCorrection : false;
         dockTabRoot.currentHoverScale = (s.hoverScale !== undefined && !isNaN(parseInt(s.hoverScale))) ? parseInt(s.hoverScale) : 120;
+        dockTabRoot.currentHoverLift = (s.hoverLift !== undefined && !isNaN(parseInt(s.hoverLift))) ? parseInt(s.hoverLift) : 12;
         dockTabRoot.currentCascadeScale = s.cascadeScale !== undefined ? Boolean(s.cascadeScale) : false;
         dockTabRoot.currentEnableScrolling = s.enableScrolling !== undefined ? s.enableScrolling : false;
         dockTabRoot.currentVisibleElements = (s.visibleElements !== undefined && !isNaN(parseInt(s.visibleElements)) && parseInt(dockSettings.visibleElements) > 0) ? parseInt(s.visibleElements) : 7;
@@ -147,6 +153,9 @@ GuideTab {
     Connections {
         target: typeof Config !== "undefined" ? Config : null
         function onSettingsLoaded() {
+            dockTabRoot.syncSettings();
+          }
+          function onRawSettingsChanged() {
             dockTabRoot.syncSettings();
         }
     }
@@ -689,6 +698,86 @@ GuideTab {
                             onToggled: function(val) {
                                 dockTabRoot.currentBackground = val;
                                 dockTabRoot.updateDockSetting("background", val);
+
+
+
+
+
+
+
+
+                            }
+                        }
+                    }
+                }
+                Item {
+                    id: iconBackgroundWrapper
+                    Layout.fillWidth: true
+                    clip: true
+                    readonly property bool shouldBeOpen: dockTabRoot.currentEnabled || iconBackgroundRow.tempVisible
+                    property real openProgress: shouldBeOpen ? 1 : 0
+                    visible: openProgress > 0.001
+                    implicitHeight: iconBackgroundRow.implicitHeight * openProgress
+                    Behavior on openProgress {
+                        NumberAnimation { duration: 250; easing.type: Easing.InOutCubic }
+                    }
+                    SettingsRow {
+                        id: iconBackgroundRow
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        settingId: "dock_icon_background"
+                        rootObj: dockTabRoot.rootObj
+                        icon: "󰹯"
+                        title: I18n.t("guide.dock.iconBackground.title", "App icon tile background")
+                        description: I18n.t("guide.dock.iconBackground.desc", "Show individual background tiles behind each dock icon")
+                        property bool tempVisible: false
+                        function checkHighlight() {
+                            let r = effectiveRootObj;
+                            if (!r) return;
+                            if (r.highlightToken === handledHighlightToken) return;
+                            if (r.highlightedSettingId && (r.highlightedSettingId === effectiveSettingId || r.highlightedSettingId === settingId)) {
+                                handledHighlightToken = r.highlightToken;
+                                r.highlightedSettingId = "";
+                                if (!dockTabRoot.currentEnabled) {
+                                    tempVisible = true;
+                                    iconBackgroundCollapseTimer.restart();
+                                }
+                                highlightDelayTimer.restart();
+                            }
+                        }
+                        Timer {
+                            id: iconBackgroundCollapseTimer
+                            interval: 2800
+                            repeat: false
+                            onTriggered: iconBackgroundRow.tempVisible = false
+                        }
+                        Toggle {
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            checked: dockTabRoot.currentIconBackground
+                            accentColor: ThemeBackend.mauve
+                            baseColor: ThemeBackend.surface1
+                            handleColor: ThemeBackend.crust
+                            handleOffColor: ThemeBackend.text
+                            onToggled: function(val) {
+                                dockTabRoot.currentIconBackground = val;
+                                dockTabRoot.updateDockSetting("iconBackground", val);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                             }
                         }
                     }
@@ -922,7 +1011,7 @@ GuideTab {
                             stepSize: 2
                             defaultValue: 120
                             showValueBubble: true
-                            valueFormatter: function(v) { return Math.round(v) + "%" }
+                            valueFormatter: function(v) { let val = Math.round(v); return val === 100 ? "100% (Disabled)" : (val + "%"); }
                             value: dockTabRoot.currentHoverScale
                             backgroundColor: ThemeBackend.surface0
                             accentColor: ThemeBackend.mauve
@@ -940,6 +1029,52 @@ GuideTab {
                             onDragFinished: {
                                 dockDebounceTimer.stop();
                                 dockTabRoot.updateDockSetting("hoverScale", Math.round(hoverScaleSlider.value));
+                            }
+                        }
+                    }
+                }
+
+                CollapsibleSection {
+                    open: dockTabRoot.currentEnabled || hoverLiftRow.tempVisible
+                    row: hoverLiftRow
+
+                    RevealableSettingsRow {
+                        id: hoverLiftRow
+                        settingId: "dock_hover_lift"
+                        rootObj: dockTabRoot.rootObj
+                        icon: "󰅃"
+                        title: I18n.t("guide.dock.hover_lift.title", "Hover lift animation")
+                        description: I18n.t("guide.dock.hover_lift.desc", "Vertical lift height of apps when hovering")
+                        revealWhenClosed: !dockTabRoot.currentEnabled
+
+                        Draggable {
+                            id: hoverLiftSlider
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                            implicitWidth: dockTabRoot.rootObj.s(220)
+                            implicitHeight: dockTabRoot.rootObj.s(18)
+                            from: 0
+                            to: 24
+                            stepSize: 1
+                            defaultValue: 12
+                            showValueBubble: true
+                            valueFormatter: function(v) { let val = Math.round(v); return val === 0 ? "Disabled" : (val + " px"); }
+                            value: dockTabRoot.currentHoverLift
+                            backgroundColor: ThemeBackend.surface0
+                            accentColor: ThemeBackend.mauve
+                            handleColor: ThemeBackend.text
+                            handleBorderColor: ThemeBackend.mantle
+                            onMoved: function(val) {
+                                let rounded = Math.round(val);
+                                if (dockTabRoot.currentHoverLift !== rounded) {
+                                    dockTabRoot.currentHoverLift = rounded;
+                                    dockTabRoot.triggerDebounced(function() {
+                                        dockTabRoot.updateDockSetting("hoverLift", rounded);
+                                    });
+                                }
+                            }
+                            onDragFinished: {
+                                dockDebounceTimer.stop();
+                                dockTabRoot.updateDockSetting("hoverLift", Math.round(hoverLiftSlider.value));
                             }
                         }
                     }

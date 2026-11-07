@@ -57,7 +57,14 @@ BarFaceBase {
     property real sysVolume: isPreview ? 65 : (Audio.defaultSink && Audio.defaultSink.audio ? Math.round(Audio.defaultSink.audio.volume * 100) : 0)
     property bool isMuted: isPreview ? false : (Audio.defaultSink && Audio.defaultSink.audio ? Audio.defaultSink.audio.muted : false)
     property string volPercent: sysVolume + "%"
-    property string volIcon: isMuted || sysVolume === 0 ? "󰖁" : (sysVolume > 50 ? "󰕾" : "󰖀")
+            property string volIcon: {
+                let percent = parseInt(volPercent) || 0;
+                if (isMuted) return "audio-volume-muted-symbolic";
+                if (percent >= 70) return "audio-volume-high-symbolic";
+                if (percent >= 30) return "audio-volume-medium-symbolic";
+                if (percent > 0) return "audio-volume-low-symbolic";
+                return "audio-volume-muted-symbolic";
+            }
     property bool sysMuted: isMuted
 
     property bool isDraggingVol: false
@@ -116,7 +123,7 @@ BarFaceBase {
             if (mouse.button === Qt.RightButton) {
                 if (Audio.defaultSink) Audio.toggleMute(Audio.defaultSink)
             } else {
-                Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle volume"])
+                PopupController.toggle("volume")
             }
         }
 
@@ -155,19 +162,30 @@ BarFaceBase {
 
         Item {
             visible: root.showIcon
-            width: root.isVertical ? textIcon.implicitWidth : s(root.isCompact ? 18 : 20)
-            height: root.isVertical ? textIcon.implicitHeight : width
+            width: s(root.isCompact ? 18 : 20)
+            height: width
 
+            // Text {
+            //     id: textIcon
+            //     anchors.centerIn: parent
+            //     text: root.volIcon
+            //     font.family: ThemeBackend.iconFont
+            //     font.pixelSize: s(root.isCompact ? 14 : 15)
+            //     horizontalAlignment: Text.AlignHCenter
+            //     verticalAlignment: Text.AlignVCenter
+            //     color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isSoundActive ? ThemeBackend.mauve : ThemeBackend.subtext0)
+            //     Behavior on color { ColorAnimation { duration: 150 } }
+            // }
             Text {
                 id: textIcon
                 anchors.centerIn: parent
                 text: root.volIcon
-                font.family: ThemeBackend.iconFont
-                font.pixelSize: s(root.isCompact ? 14 : 15)
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+                // font.family: ThemeBackend.iconFont
+                // font.pixelSize: s(root.isCompact ? 14 : 15)
+                // horizontalAlignment: Text.AlignHCenter
+                // verticalAlignment: Text.AlignVCenter
                 color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isSoundActive ? ThemeBackend.mauve : ThemeBackend.subtext0)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
 
@@ -218,7 +236,7 @@ BarFaceBase {
             transform: Translate { y: volPill.initAnimTrigger ? 0 : s(15); Behavior on y { NumberAnimation { duration: 620; easing.type: Easing.OutQuint } } }
             Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle volume"])
+            onClicked: if (!root.isPreview) PopupController.toggle("volume")
             onRightClicked: if (!root.isPreview && Audio.defaultSink) Audio.toggleMute(Audio.defaultSink)
 
             property real wheelAccumulator: 0
@@ -256,7 +274,7 @@ BarFaceBase {
             iconFontSize: s(root.isCompact ? 14 : 15)
             accentColor: root.isSoundActive ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface1, 1.12) : ThemeBackend.surface1)
             textColor: root.isSoundActive ? ThemeBackend.base : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle volume"])
+            onClicked: if (!root.isPreview) PopupController.toggle("volume")
         }
     }
 }

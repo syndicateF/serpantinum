@@ -276,12 +276,7 @@ PanelWindow {
     function openGuide(tab) {
         DesktopMenuController.hide();
         let targetTab = tab !== undefined ? String(tab).trim() : "";
-        let dir = (typeof Caching !== "undefined" && Caching.serpantinumDir) ? Caching.serpantinumDir : "";
-        let args = "toggle settings" + (targetTab ? (" " + targetTab) : "");
-        let cmd = (dir ? ("if [ -f '" + dir + "/scripts/qs_manager.sh' ]; then bash '" + dir + "/scripts/qs_manager.sh' " + args + "; else ") : "")
-            + "if command -v serpantinum >/dev/null 2>&1; then serpantinum msg " + args + "; elif command -v qs_manager.sh >/dev/null 2>&1; then qs_manager.sh " + args + "; fi"
-            + (dir ? "; fi" : "");
-        Quickshell.execDetached(["bash", "-c", cmd]);
+        PopupController.toggle("settings", targetTab);
     }
 
     Item {
@@ -570,12 +565,7 @@ PanelWindow {
                             textColor: ThemeBackend.text
                             onClicked: {
                                 DesktopMenuController.hide();
-                                let dir = (typeof Caching !== "undefined" && Caching.serpantinumDir) ? Caching.serpantinumDir : "";
-                                if (dir) {
-                                    Quickshell.execDetached(["bash", "-c", dir + "/scripts/qs_manager.sh toggle wallpaper"]);
-                                } else {
-                                    Quickshell.execDetached(["bash", "-c", "qs_manager.sh toggle wallpaper"]);
-                                }
+                                PopupController.toggle("wallpaper");
                             }
                         }
 

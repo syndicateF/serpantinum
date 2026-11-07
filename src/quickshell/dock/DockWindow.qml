@@ -44,7 +44,26 @@ DockWindowApps {
         }
     }
 
-    readonly property real hoverExpansion: Math.round(Math.max(s(24), s(dockElementSize) * (dockHoverScaleMultiplier - 1.0) + s(12)))
+    readonly property real hoverExpansion: Math.round(Math.max(s(24), s(dockElementSize) * (dockHoverScaleMultiplier - 1.0) + s(dockHoverLift)))
+
+    readonly property bool isHovering: dockContainerItem.hoveredItemIndex !== -1
+    property bool isMagnifying: isHovering || magShrinkTimer.running
+
+    onIsHoveringChanged: {
+        if (!isHovering) {
+            magShrinkTimer.restart();
+        } else {
+            magShrinkTimer.stop();
+        }
+    }
+
+    Timer {
+        id: magShrinkTimer
+        interval: 250
+        repeat: false
+    }
+
+    readonly property real effectiveHoverExpansion: isMagnifying ? hoverExpansion : 0
 
     property int dockElementSize: {
         if (overrideBoundsCorrection) return rawElementSize;
@@ -257,11 +276,9 @@ DockWindowApps {
         loadApps();
         loadAllDesktopApps();
         initTimer.start();
-        ShellSurfaces.register("docks", modelData.name, dockWindowRoot);
     }
 
     Component.onDestruction: {
-        ShellSurfaces.unregister("docks", modelData.name, dockWindowRoot);
         if (Compositor.name === "niri") {
             NiriState.unsubscribe();
         }
@@ -355,10 +372,10 @@ DockWindowApps {
 
     Item {
         id: dockMaskArea
-        readonly property real rawX: dockContainerItem.x - (dockContainerItem.isAttached && !dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius : 0) + dockTransform.x - dockWindowRoot.hoverExpansion
-        readonly property real rawY: dockContainerItem.y - (dockContainerItem.isAttached && dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius : 0) + dockTransform.y - dockWindowRoot.hoverExpansion
-        readonly property real rawW: dockContainerItem.width + (dockContainerItem.isAttached && !dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius * 2 : 0) + dockWindowRoot.hoverExpansion * 2
-        readonly property real rawH: dockContainerItem.height + (dockContainerItem.isAttached && dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius * 2 : 0) + dockWindowRoot.hoverExpansion * 2
+        readonly property real rawX: dockContainerItem.x - (dockContainerItem.isAttached && !dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius : 0) + dockTransform.x - dockWindowRoot.effectiveHoverExpansion
+        readonly property real rawY: dockContainerItem.y - (dockContainerItem.isAttached && dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius : 0) + dockTransform.y - dockWindowRoot.effectiveHoverExpansion
+        readonly property real rawW: dockContainerItem.width + (dockContainerItem.isAttached && !dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius * 2 : 0) + dockWindowRoot.effectiveHoverExpansion * 2
+        readonly property real rawH: dockContainerItem.height + (dockContainerItem.isAttached && dockWindowRoot.isVertical ? dockWindowRoot.outerCornerRadius * 2 : 0) + dockWindowRoot.effectiveHoverExpansion * 2
         readonly property real minX: (dockWindowRoot.sameSideAsBar && dockWindowRoot.dockPosition === "left") ? dockWindowRoot.barOffset : 0
         readonly property real maxX: dockWindowRoot.effectiveWindowWidth - ((dockWindowRoot.sameSideAsBar && dockWindowRoot.dockPosition === "right") ? dockWindowRoot.barOffset : 0)
         readonly property real minY: (dockWindowRoot.sameSideAsBar && dockWindowRoot.dockPosition === "top") ? dockWindowRoot.barOffset : 0
@@ -375,16 +392,9 @@ DockWindowApps {
         z: 999999
     }
 
-    property alias snapshotItem: dockSnapshotRoot
-
-    Item {
-        id: dockSnapshotRoot
-        anchors.fill: parent
-
-        DockContainer {
-            id: dockContainerItem
-            dockWindow: dockWindowRoot
-        }
+    DockContainer {
+        id: dockContainerItem
+        dockWindow: dockWindowRoot
     }
 
     DockAppPicker {

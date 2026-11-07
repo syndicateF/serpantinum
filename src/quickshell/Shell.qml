@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import "widgets"
 
 ShellRoot {
@@ -41,6 +42,17 @@ ShellRoot {
             if (screenshotLoader.item) screenshotLoader.item.deactivate();
         }
     }
+
+    GlobalShortcut { name: "volumeToggle";        onPressed: PopupController.toggle("volume") }
+    GlobalShortcut { name: "networkToggle";       onPressed: PopupController.toggle("network") }
+    GlobalShortcut { name: "calendarToggle";      onPressed: PopupController.toggle("calendar") }
+    GlobalShortcut { name: "musicToggle";         onPressed: PopupController.toggle("music") }
+    GlobalShortcut { name: "systemToggle";        onPressed: PopupController.toggle("system") }
+    GlobalShortcut { name: "notificationsToggle"; onPressed: PopupController.toggle("notifications") }
+    GlobalShortcut { name: "guideToggle";         onPressed: PopupController.toggle("guide") }
+    GlobalShortcut { name: "wallpaperToggle";     onPressed: PopupController.toggle("wallpaper") }
+    GlobalShortcut { name: "launcherToggle";      onPressed: LauncherController.toggle() }
+    GlobalShortcut { name: "clipboardToggle";     onPressed: ClipboardController.toggle() }
 
     Main {}
     Bar {}

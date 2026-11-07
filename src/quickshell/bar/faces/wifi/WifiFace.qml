@@ -56,7 +56,7 @@ BarFaceBase {
     readonly property bool isDesktop: !SystemInfo.hasBatSupply
     property string ethStatus: "Ethernet"
     property string wifiStatus: isPreview ? "Enabled" : "Off"
-    property string wifiIcon: isPreview ? "󰤨" : "󰤮"
+    property string wifiIcon: isPreview ? "network-wireless-signal-excellent-symbolic" : "network-wireless-offline-symbolic"
     property string wifiSsid: isPreview ? "Home-WiFi" : ""
     property bool isWifiOn: isPreview ? true : Networking.wifiEnabled
     property bool showEthernet: !isPreview && (ethStatus === "Connected" || (isDesktop && !isWifiOn))
@@ -145,7 +145,7 @@ BarFaceBase {
 
         if (!isWifiEnabled) {
             wifiSsid = "";
-            wifiIcon = "󰤮";
+            wifiIcon = "network-wireless-offline-symbolic";
             return;
         }
 
@@ -162,14 +162,14 @@ BarFaceBase {
         if (connectedNet) {
             wifiSsid = connectedNet.name || connectedNet.ssid || "";
             let sig = connectedNet.signalStrength !== undefined ? Math.round(connectedNet.signalStrength * (connectedNet.signalStrength <= 1 ? 100 : 1)) : 100;
-            if (sig >= 80) wifiIcon = "󰤨";
-            else if (sig >= 60) wifiIcon = "󰤥";
-            else if (sig >= 40) wifiIcon = "󰤢";
-            else if (sig >= 20) wifiIcon = "󰤟";
-            else wifiIcon = "󰤯";
+            if (sig >= 80) wifiIcon = "network-wireless-signal-excellent-symbolic";
+            else if (sig >= 60) wifiIcon = "network-wireless-signal-good-symbolic";
+            else if (sig >= 40) wifiIcon = "network-wireless-signal-ok-symbolic";
+            else if (sig >= 20) wifiIcon = "network-wireless-signal-weak-symbolic";
+            else wifiIcon = "network-wireless-signal-none-symbolic";
         } else {
             wifiSsid = "";
-            wifiIcon = "󰤯";
+            wifiIcon = "network-wireless-disconnected-symbolic";
         }
     }
 
@@ -269,7 +269,7 @@ BarFaceBase {
         }
     }
 
-    property string effectiveIcon: root.showEthernet ? "󰈀" : root.wifiIcon
+    property string effectiveIcon: root.showEthernet ? "network-wired-symbolic" : root.wifiIcon
     property string effectiveName: root.showEthernet ? root.ethStatus : ((root.isWifiOn ? (root.wifiSsid !== "" ? root.wifiSsid : "On") : "Off"))
     readonly property bool isActive: root.showEthernet ? (root.ethStatus === "Connected") : root.isWifiOn
 
@@ -313,7 +313,7 @@ BarFaceBase {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         enabled: root.wifiStyle === "text" && !root.isPreview
-        onClicked: Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network wifi"])
+        onClicked: PopupController.toggle("network", "wifi")
     }
 
     AxisFlow {
@@ -329,19 +329,18 @@ BarFaceBase {
 
         Item {
             visible: root.showIcon
-            width: root.isVertical ? textIcon.implicitWidth : s(root.isCompact ? 18 : 20)
-            height: root.isVertical ? textIcon.implicitHeight : width
+            width: s(root.isCompact ? 18 : 20)
+            height: width
 
-            Text {
+            PanelIcon {
                 id: textIcon
                 anchors.centerIn: parent
-                text: root.effectiveIcon
-                font.family: ThemeBackend.iconFont
-                font.pixelSize: s(root.isCompact ? 14 : 15)
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+                // horizontalAlignment: Text.AlignHCenter
+                // verticalAlignment: Text.AlignVCenter
+                icon: root.effectiveIcon
+                size: s(root.isCompact ? 14 : 15)
                 color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.blue, 1.15) : (root.isActive ? ThemeBackend.blue : ThemeBackend.subtext0)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
 
@@ -390,7 +389,7 @@ BarFaceBase {
             transform: Translate { y: wifiPill.initAnimTrigger ? 0 : s(15); Behavior on y { NumberAnimation { duration: 620; easing.type: Easing.OutQuint } } }
             Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network wifi"])
+            onClicked: if (!root.isPreview) PopupController.toggle("network", "wifi")
         }
     }
 
@@ -408,7 +407,7 @@ BarFaceBase {
             textFontSize: s(root.isCompact ? 9 : 10)
             accentColor: root.isActive ? (root.isCompact ? Qt.lighter(ThemeBackend.blue, 1.08) : ThemeBackend.blue) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
             textColor: root.isActive ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
-            onClicked: if (!root.isPreview) Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle network wifi"])
+            onClicked: if (!root.isPreview) PopupController.toggle("network", "wifi")
         }
     }
 }

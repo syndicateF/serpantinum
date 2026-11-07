@@ -183,7 +183,7 @@ Item {
                         height: mediaLayoutContainer.height
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle music"])
+                        onClicked: PopupController.toggle("music")
 
                         Row {
                             id: infoLayout
@@ -447,7 +447,7 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             if (Caching.serpantinumDir) {
-                                Quickshell.execDetached(["bash", "-c", Caching.serpantinumDir + "/scripts/qs_manager.sh toggle music"]);
+                                PopupController.toggle("music");
                             }
                         }
                     }
