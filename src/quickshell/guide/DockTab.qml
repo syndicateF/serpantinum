@@ -335,7 +335,6 @@ GuideTab {
                             id: dockAppsCard.settingId,
                             title: dockAppsCard.title,
                             desc: dockAppsCard.description,
-                            description: dockAppsCard.description,
                             tab: info.tab,
                             subtab: info.subtab,
                             icon: dockAppsCard.icon,
