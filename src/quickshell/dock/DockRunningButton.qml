@@ -10,11 +10,8 @@ Item {
     required property var model
     required property int index
 
-    implicitWidth: dockWindow.s(dockWindow.dockElementSize)
-    implicitHeight: dockWindow.s(dockWindow.dockElementSize)
-    Layout.preferredWidth: dockWindow.s(dockWindow.dockElementSize)
-    Layout.preferredHeight: dockWindow.s(dockWindow.dockElementSize)
-    Layout.alignment: Qt.AlignCenter
+    readonly property bool isClosing: Boolean(model && model.is_closing)
+    property real slotProgress: 1.0
 
     property int itemIndex: dockWindow.dockAppsModel.count + 1 + index
     property real popScale: 1.0
@@ -22,6 +19,79 @@ Item {
     property color btnColor: ThemeBackend.surface0
     property int cornerRadius: Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.28)
     property int btnSize: dockWindow.s(dockWindow.dockElementSize)
+
+    implicitWidth: dockWindow.isVertical ? btnSize : Math.round(btnSize * slotProgress)
+    implicitHeight: dockWindow.isVertical ? Math.round(btnSize * slotProgress) : btnSize
+    Layout.preferredWidth: implicitWidth
+    Layout.preferredHeight: implicitHeight
+    Layout.maximumWidth: implicitWidth
+    Layout.maximumHeight: implicitHeight
+    Layout.alignment: Qt.AlignCenter
+
+    NumberAnimation {
+        id: enterAnim
+        target: runningDockButton
+        property: "slotProgress"
+        to: 1.0
+        duration: 220
+        easing.type: Easing.OutCubic
+    }
+
+    SequentialAnimation {
+        id: exitAnim
+        NumberAnimation {
+            target: runningDockButton
+            property: "slotProgress"
+            to: 0.0
+            duration: 220
+            easing.type: Easing.OutCubic
+        }
+        ScriptAction {
+            script: {
+                if (runningDockButton.isClosing) {
+                    dockWindow.removeClosingRunningApp(model.desktop_id, model.canonical_id);
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: safetyExitTimer
+        interval: 350
+        repeat: false
+        running: runningDockButton.isClosing
+        onTriggered: {
+            if (runningDockButton.isClosing) {
+                dockWindow.removeClosingRunningApp(model.desktop_id, model.canonical_id);
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (dockWindow.initialized && !isClosing) {
+            slotProgress = 0.0;
+            enterAnim.restart();
+        }
+    }
+
+    onIsClosingChanged: {
+        if (isClosing) {
+            if (dockContainer.hoveredItemIndex === runningDockButton.itemIndex) {
+                dockContainer.hoveredItemIndex = -1;
+                dockContainer.hoveredButton = null;
+                dockContainer.hoveredAppName = "";
+            }
+            if (dockContainer.clickedItemIndex === runningDockButton.itemIndex) {
+                dockContainer.cancelClickFeedback();
+            }
+            enterAnim.stop();
+            exitAnim.restart();
+        } else {
+            exitAnim.stop();
+            safetyExitTimer.stop();
+            enterAnim.restart();
+        }
+    }
 
     readonly property var runningInfo: dockWindow.getRunningInfoForApp(model.desktop_id)
     readonly property bool isAppRunning: runningInfo !== null && runningInfo.hasWindows
@@ -47,8 +117,8 @@ Item {
     readonly property real indicatorScaleOffset: (runningDockButton.btnSize * Math.max(0.0, runningBtnShape.scale - 1.0)) / 2
 
     property real baseHoverScale: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 1.0;
-        let diff = Math.abs(runningDockButton.itemIndex - dockContainer.hoveredItemIndex);
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0) return 1.0;
+        let diff = Math.abs(runningDockButton.itemIndex - dockContainer.effectiveHoveredIndex);
         if (diff === 0) return maxHoverScale;
         if (dockWindow.dockCascadeScale) {
             if (diff === 1) return 1.0 + hoverScaleDelta * 0.45;
@@ -66,8 +136,8 @@ Item {
     }
 
     property real animSpread: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 0.0;
-        let diff = itemIndex - dockContainer.hoveredItemIndex;
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0) return 0.0;
+        let diff = itemIndex - dockContainer.effectiveHoveredIndex;
         if (diff === 0) return 0.0;
         let sign = diff > 0 ? 1.0 : -1.0;
         let d = Math.abs(diff);
@@ -89,10 +159,10 @@ Item {
     }
 
     property real animLift: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
         let maxLift = dockWindow.s(dockWindow.dockHoverLift);
         if (maxHoverScale <= 1.001) {
-            let diff = Math.abs(runningDockButton.itemIndex - dockContainer.hoveredItemIndex);
+            let diff = Math.abs(runningDockButton.itemIndex - dockContainer.effectiveHoveredIndex);
             if (diff === 0) return maxLift;
             if (dockWindow.dockCascadeScale) {
                 if (diff === 1) return maxLift * 0.45;
@@ -135,7 +205,13 @@ Item {
 
     Item {
         id: runningFloatWrapper
-        anchors.fill: parent
+        anchors.centerIn: parent
+        width: runningDockButton.btnSize
+        height: runningDockButton.btnSize
+
+        transformOrigin: Item.Center
+        scale: Math.max(0.001, runningDockButton.slotProgress)
+        opacity: Math.min(1.0, runningDockButton.slotProgress * 1.5)
 
         transform: Translate {
             x: runningDockButton.currentOffsetX
@@ -168,6 +244,12 @@ Item {
             Behavior on color { ColorAnimation { duration: 150 } }
             Behavior on scale {
                 NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
+
+            SequentialAnimation {
+                id: runningBtnPopAnim
+                NumberAnimation { target: runningDockButton; property: "popScale"; to: 1.08; duration: 100; easing.type: Easing.OutQuad }
+                NumberAnimation { target: runningDockButton; property: "popScale"; to: 1.0; duration: 220; easing.type: Easing.OutQuad }
             }
 
             Image {
@@ -226,24 +308,18 @@ Item {
 
         Item {
             id: runningIndicatorContainer
-            visible: dockWindow.showRunningIndicators && runningDockButton.isAppRunning
+            visible: dockWindow.showRunningIndicators && runningDockButton.isAppRunning && !runningDockButton.isClosing
             opacity: (visible && dockContainer.revealProgress > 0.1) ? 1.0 : 0.0
-
-            anchors.horizontalCenter: !dockWindow.isVertical ? parent.horizontalCenter : undefined
-            anchors.verticalCenter: dockWindow.isVertical ? parent.verticalCenter : undefined
-
-            anchors.bottom: dockWindow.dockPosition === "bottom" ? parent.bottom : undefined
-            anchors.top: dockWindow.dockPosition === "top" ? parent.top : undefined
-            anchors.left: dockWindow.dockPosition === "left" ? parent.left : undefined
-            anchors.right: dockWindow.dockPosition === "right" ? parent.right : undefined
-
-            anchors.bottomMargin: dockWindow.dockPosition === "bottom" ? dockWindow.s(2) : 0
-            anchors.topMargin: dockWindow.dockPosition === "top" ? dockWindow.s(2) : 0
-            anchors.leftMargin: dockWindow.dockPosition === "left" ? dockWindow.s(2) : 0
-            anchors.rightMargin: dockWindow.dockPosition === "right" ? dockWindow.s(2) : 0
 
             width: dockWindow.isVertical ? dockWindow.s(4) : runningRow.implicitWidth
             height: dockWindow.isVertical ? runningCol.implicitHeight : dockWindow.s(4)
+
+            x: dockWindow.isVertical
+                ? (dockWindow.dockPosition === "left" ? dockWindow.s(2) : Math.round(parent.width - width - dockWindow.s(2)))
+                : Math.round((parent.width - width) / 2)
+            y: !dockWindow.isVertical
+                ? (dockWindow.dockPosition === "top" ? dockWindow.s(2) : Math.round(parent.height - height - dockWindow.s(2)))
+                : Math.round((parent.height - height) / 2)
 
             transform: Translate {
                 x: {
@@ -315,6 +391,7 @@ Item {
         MouseArea {
             id: runningBtnMa
             anchors.fill: parent
+            enabled: !runningDockButton.isClosing
             anchors.margins: -Math.max(dockContainer.itemSpacing / 2, (runningBtnShape.scale - 1.0) * runningDockButton.btnSize / 2)
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
@@ -322,6 +399,9 @@ Item {
 
             onEntered: {
                 dockContainer.cancelHoverReset();
+                if (dockContainer.clickedItemIndex >= 0) {
+                    dockContainer.cancelClickFeedback();
+                }
                 if (runningDockButton.canHoverScale) {
                     dockContainer.hoveredItemIndex = runningDockButton.itemIndex;
                     dockContainer.hoveredButton = runningDockButton;
@@ -337,6 +417,8 @@ Item {
 
             onClicked: function(mouse) {
                 if (mouse.button === Qt.MiddleButton) {
+                    runningBtnPopAnim.start();
+                    dockContainer.triggerClickFeedback(runningDockButton);
                     dockWindow.launchApp(model.desktop_id);
                     return;
                 }
@@ -394,6 +476,8 @@ Item {
                         DockAppMenuController.hide();
                     }
 
+                    runningBtnPopAnim.start();
+                    dockContainer.triggerClickFeedback(runningDockButton);
                     runningDockButton.flashOpacity = 0.4;
                     runningBtnFlashAnim.start();
                     if (typeof Sounds !== "undefined") Sounds.playSfx("reusables/iconbutton/click.wav");

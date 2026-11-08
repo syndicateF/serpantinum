@@ -60,4 +60,30 @@ SettingsBlob {
             }
         ]
     }
+
+    SettingsRow {
+        rootObj: section.tab.rootObj
+        icon: "󰏘"
+        title: I18n.t("guide.bar.pill_color_style.title", "Pill color style")
+        description: I18n.t("guide.bar.pill_color_style.desc", "Choose between solid fill or tinted translucent accent pills")
+
+        Switch {
+            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+            implicitWidth: rootObj.s(160)
+            implicitHeight: rootObj.s(32)
+            options: [I18n.t("guide.bar.pill_color_style.solid", "Solid"), I18n.t("guide.bar.pill_color_style.tinted", "Tinted")]
+            currentIndex: section.tab.pillColorStyle === "tinted" ? 1 : 0
+            accentColor: ThemeBackend.mauve
+            baseColor: ThemeBackend.surface0
+            textColor: ThemeBackend.subtext0
+            activeTextColor: ThemeBackend.crust
+            cornerRadius: ThemeBackend.borderRadius
+            fontPixelSize: rootObj.s(11)
+            onToggled: function(index) {
+                section.tab.clearPendingGroup();
+                section.tab.pillColorStyle = (index === 1) ? "tinted" : "solid";
+                section.tab.updateBarSettings();
+            }
+        }
+    }
 }

@@ -90,7 +90,8 @@ PanelWindow {
     property int launcherCustomItemCount: (rawLauncherSettings && rawLauncherSettings.itemCount !== undefined && !isNaN(rawLauncherSettings.itemCount) && rawLauncherSettings.itemCount > 0) ? rawLauncherSettings.itemCount : 6
 
     property bool dockEnabled: rawDockSettings.enabled !== undefined ? rawDockSettings.enabled : true
-    property string dockPosition: rawDockSettings.position !== undefined ? rawDockSettings.position : "bottom"
+    readonly property string requestedDockPosition: rawDockSettings.position !== undefined ? rawDockSettings.position : "bottom"
+    property string dockPosition: requestedDockPosition
     property bool dockOnTop: {
         let val = undefined;
         if (rawDockSettings && rawDockSettings.onTop !== undefined) {

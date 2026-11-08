@@ -232,7 +232,8 @@ DockWindowState {
                 desktop_id: dId !== "" ? (dId.endsWith(".desktop") ? dId : (dId + ".desktop")) : (rawApp ? (rawApp + ".desktop") : cid),
                 icon: appIcon,
                 canonical_id: cid,
-                is_pinned: false
+                is_pinned: false,
+                is_closing: false
             });
         }
 
@@ -247,7 +248,15 @@ DockWindowState {
                 }
             }
             if (!exists) {
-                runningAppsModel.remove(r);
+                if (!dockWindow.initialized) {
+                    runningAppsModel.remove(r);
+                } else if (!rItem.is_closing) {
+                    runningAppsModel.setProperty(r, "is_closing", true);
+                }
+            } else {
+                if (rItem.is_closing) {
+                    runningAppsModel.setProperty(r, "is_closing", false);
+                }
             }
         }
 
@@ -265,6 +274,16 @@ DockWindowState {
                 runningAppsModel.insert(c, cand);
             } else if (idx !== c) {
                 runningAppsModel.move(idx, c, 1);
+            }
+        }
+    }
+
+    function removeClosingRunningApp(desktopId, canonicalId) {
+        for (let r = runningAppsModel.count - 1; r >= 0; r--) {
+            let item = runningAppsModel.get(r);
+            if (item && (item.desktop_id === desktopId || (canonicalId && item.canonical_id === canonicalId))) {
+                runningAppsModel.remove(r);
+                break;
             }
         }
     }

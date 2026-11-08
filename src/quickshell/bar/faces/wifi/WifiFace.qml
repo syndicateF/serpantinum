@@ -339,7 +339,7 @@ BarFaceBase {
                 // verticalAlignment: Text.AlignVCenter
                 icon: root.effectiveIcon
                 size: s(root.isCompact ? 14 : 15)
-                color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.blue, 1.15) : (root.isActive ? ThemeBackend.blue : ThemeBackend.subtext0)
+                color: root.isActive ? ThemeBackend.blue : ThemeBackend.subtext0
                 // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
@@ -350,8 +350,8 @@ BarFaceBase {
             font.family: ThemeBackend.fontFamily
             font.pixelSize: root.isVertical ? s(root.isCompact ? 9 : 10) : s(root.isCompact ? 11 : 12)
             font.bold: true
-            color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.text, 1.15) : ThemeBackend.text
-            Behavior on color { ColorAnimation { duration: 150 } }
+            color: ThemeBackend.text
+            // Behavior on color { ColorAnimation { duration: 150 } }
         }
     }
 
@@ -378,8 +378,8 @@ BarFaceBase {
             iconFontSize: s(root.isCompact ? 14 : 15)
             buttonText: root.showName ? root.effectiveName : ""
             textFontSize: s(root.isCompact ? 11 : 12)
-            accentColor: isActive ? (root.isCompact ? Qt.lighter(ThemeBackend.blue, 1.08) : ThemeBackend.blue) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
-            textColor: isActive ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
+            accentColor: root.getPillAccentColor(ThemeBackend.blue, isActive)
+            textColor: root.getPillTextColor(ThemeBackend.blue, isActive)
 
             property real targetWidth: (root.showIcon || root.showName) ? implicitWidth : 0
             width: targetWidth
@@ -405,8 +405,8 @@ BarFaceBase {
             iconFontSize: s(root.isCompact ? 14 : 15)
             buttonText: (!root.showIcon && root.showName) ? (root.effectiveName.length > 3 ? root.effectiveName.substring(0, 3) : root.effectiveName) : ""
             textFontSize: s(root.isCompact ? 9 : 10)
-            accentColor: root.isActive ? (root.isCompact ? Qt.lighter(ThemeBackend.blue, 1.08) : ThemeBackend.blue) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
-            textColor: root.isActive ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
+            accentColor: root.getPillAccentColor(ThemeBackend.blue, root.isActive)
+            textColor: root.getPillTextColor(ThemeBackend.blue, root.isActive)
             onClicked: if (!root.isPreview) PopupController.toggle("network", "wifi")
         }
     }

@@ -261,7 +261,7 @@ Item {
             textColor: ThemeBackend.base
             contentAlignment: Qt.AlignHCenter
             onClicked: {
-                PopupController.toggle("wallpaper");
+                Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "toggle", "wallpaper"]);
             }
         }
 

@@ -47,7 +47,9 @@
       "screenshot": "Tangkapan layar",
       "theme_appearance": "Tampilan",
       "theme_apps": "Tema aplikasi",
-      "theme_wallpapers": "Wallpaper"
+      "theme_wallpapers": "Wallpaper",
+      "general_main": "Umum",
+      "general_presets": "Preset"
     },
     "launcher": {
       "position": {
@@ -250,6 +252,21 @@
       "screenshot_on_release": {
         "title": "Tangkap wilayah saat tombol tetikus dilepas",
         "desc": "Ambil tangkapan layar segera setelah selesai menyeret, tanpa perlu mengeklik rana"
+      },
+      "presets": {
+        "save": {
+          "title": "Simpan pengaturan saat ini",
+          "desc": "Simpan semua pengaturan, widget, dan wallpaper sebagai preset",
+          "button": "Simpan preset"
+        },
+        "empty": "Belum ada preset. Simpan pengaturan saat ini untuk membuatnya",
+        "confirm": {
+          "title": "Terapkan preset?",
+          "desc": "Yakin ingin menerapkan preset ini tanpa menyimpan pengaturan Anda terlebih dahulu? Pengaturan Anda saat ini akan ditimpa dan tidak dapat dipulihkan.",
+          "dont_show": "Jangan tampilkan lagi",
+          "apply": "Terapkan",
+          "cancel": "Batal"
+        }
       }
     },
     "display": {
@@ -399,6 +416,12 @@
         "modular": "Modular",
         "solid": "Padat",
         "fill": "Terisi"
+      },
+      "pill_color_style": {
+        "title": "Gaya warna pil",
+        "desc": "Pilih antara isian padat (solid) atau aksen transparan berwarna (tinted)",
+        "solid": "Padat",
+        "tinted": "Tinted"
       },
       "time": {
         "title": "Format waktu",
@@ -992,10 +1015,6 @@
         "title": "Efek perbesaran saat melayang",
         "desc": "Tingkat perbesaran saat mengarahkan kursor ke item dok"
       },
-      "hover_lift": {
-        "title": "Animasi angkat vertikal saat hover",
-        "desc": "Ketinggian angkat aplikasi ke atas saat kursor diarahkan"
-      },
       "cascade_scale": {
         "title": "Perbesar elemen terdekat",
         "desc": "Perbesaran bertingkat pada ikon tetangga"
@@ -1038,10 +1057,6 @@
       "background": {
         "title": "Gambar latar di belakang aplikasi",
         "desc": "Tampilkan panel dock di belakang ikon aplikasi"
-      },
-      "iconBackground": {
-        "title": "Latar belakang ubin ikon",
-        "desc": "Tampilkan ubin latar belakang tersendiri di belakang setiap ikon dock"
       }
     },
     "lyrics_picker": {

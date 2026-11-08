@@ -50,7 +50,7 @@ Item {
             width: dashboard.shellWidth
             height: LockLayoutStore.panelH
             radius: ThemeBackend.borderRadius * 1.5
-            color: Qt.alpha(ThemeBackend.surface0, ThemeBackend.elementOpacity * LockLayoutStore.panelOpacity)
+            color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity * LockLayoutStore.panelOpacity)
             clip: true
 
             opacity: screenRoot.centerReveal

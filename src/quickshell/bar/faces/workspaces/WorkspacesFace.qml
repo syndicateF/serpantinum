@@ -327,6 +327,7 @@ Item {
         z: 2
         anchors.left: root.isVertical ? undefined : parent.left
         anchors.leftMargin: root.isVertical ? 0 : s(isCompact ? 18 : 22) / 2
+        // anchors.leftMargin: root.isVertical ? 0 : s(isCompact ? 14 : 15) / 2
         anchors.verticalCenter: root.isVertical ? undefined : parent.verticalCenter
         anchors.top: root.isVertical ? parent.top : undefined
         anchors.topMargin: root.isVertical ? s(isCompact ? 18 : 22) / 2 : 0

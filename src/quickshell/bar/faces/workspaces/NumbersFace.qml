@@ -10,9 +10,30 @@ Item {
 
     readonly property bool isVertical: widget ? widget.orientation === "vertical" : false
 
-    property real pillSize: widget ? widget.s(widget.isCompact ? 20 : 24) : 24
-    property real pillRadius: widget ? widget.s(widget.isCompact ? 6 : 7) : 7
-    property real layoutSpacing: widget ? widget.s(widget.isCompact ? 5 : 6) : 6
+    property int configRevision: 0
+
+    Connections {
+        target: (typeof Config !== "undefined") ? Config : null
+        function onSettingsLoaded() { numbersFaceRoot.configRevision++; }
+        function onRawSettingsChanged() { numbersFaceRoot.configRevision++; }
+    }
+
+    readonly property var barWindow: widget ? widget.barWindow : null
+
+    readonly property string pillColorStyle: {
+        if (barWindow && barWindow.pillColorStyle !== undefined) return barWindow.pillColorStyle;
+        if (widget && widget.pillColorStyle !== undefined) return widget.pillColorStyle;
+        let dummy = configRevision;
+        if (typeof Config !== "undefined" && Config.rawSettings && Config.rawSettings.bar && Config.rawSettings.bar.pillColorStyle !== undefined) {
+            return Config.rawSettings.bar.pillColorStyle;
+        }
+        return "solid";
+    }
+    readonly property bool isTintedPill: pillColorStyle === "tinted"
+
+    property real pillSize: widget ? widget.s(widget.isCompact ? 24 : 26) : 26
+    property real pillRadius: widget ? widget.s(widget.isCompact ? 4 : 6) : 6
+    property real layoutSpacing: widget ? widget.s(widget.isCompact ? 3 : 5) : 5
 
     function isShown(index) {
         if (!widget)
@@ -52,14 +73,18 @@ Item {
         width: numbersFaceRoot.isVertical ? numbersFaceRoot.pillSize : actualEnd - actualStart
         height: numbersFaceRoot.isVertical ? actualEnd - actualStart : numbersFaceRoot.pillSize
         radius: numbersFaceRoot.pillRadius
-        color: numbersGlass.active ? "transparent" : ((widget && widget.isCompact) ? Qt.lighter(ThemeBackend.mauve, 1.05) : ThemeBackend.mauve)
+        color: numbersGlass.active
+            ? "transparent"
+            : (numbersFaceRoot.isTintedPill
+                ? Qt.alpha(ThemeBackend.mauve, 0.1)
+                : ((widget && widget.isCompact) ? Qt.lighter(ThemeBackend.mauve, 1.05) : ThemeBackend.mauve))
 
         GlassFill {
             id: numbersGlass
             anchors.fill: parent
             radius: parent.radius
             tintColor: ThemeBackend.mauve
-            tintAmount: 0.5
+            tintAmount: numbersFaceRoot.isTintedPill ? 0.25 : 0.5
             press: 0.3 + 0.7 * activeHighlight.lift
         }
 
@@ -145,7 +170,7 @@ Item {
                     radius: numbersFaceRoot.pillRadius
                     color: numbersHoverGlass.active ? "transparent" : wsPill.isHovered
                         ? Qt.alpha(ThemeBackend.text, 0.1)
-                        : (wsPill.isActive ? "transparent" : (wsPill.isOccupied ? Qt.alpha(ThemeBackend.text, 0.15) : "transparent"))
+                        : (wsPill.isActive ? "transparent" : (wsPill.isOccupied ? ThemeBackend.surface0 : "transparent"))
 
                     Behavior on color { ColorAnimation { duration: 250 } }
 
@@ -197,7 +222,11 @@ Item {
                     font.weight: wsPill.isActive ? Font.Black : (wsPill.isOccupied ? Font.Bold : Font.Medium)
 
                     color: wsPill.isActive
-                        ? (numbersGlass.active ? ThemeBackend.text : ThemeBackend.crust)
+                        ? (numbersGlass.active
+                            ? ThemeBackend.text
+                            : (numbersFaceRoot.isTintedPill
+                                ? ((widget && widget.isCompact) ? Qt.lighter(ThemeBackend.mauve, 1.05) : ThemeBackend.mauve)
+                                : ThemeBackend.crust))
                         : (wsPill.isHovered
                             ? ThemeBackend.text
                             : (wsPill.isOccupied

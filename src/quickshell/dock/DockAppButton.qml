@@ -48,8 +48,8 @@ Item {
     readonly property real indicatorScaleOffset: (dockButton.btnSize * Math.max(0.0, btnShape.scale - 1.0)) / 2
 
     property real baseHoverScale: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 1.0;
-        let diff = Math.abs(dockButton.itemIndex - dockContainer.hoveredItemIndex);
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0) return 1.0;
+        let diff = Math.abs(dockButton.itemIndex - dockContainer.effectiveHoveredIndex);
         if (diff === 0) return maxHoverScale;
         if (dockWindow.dockCascadeScale) {
             if (diff === 1) return 1.0 + hoverScaleDelta * 0.45;
@@ -67,8 +67,8 @@ Item {
     }
 
     property real animSpread: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0) return 0.0;
-        let diff = itemIndex - dockContainer.hoveredItemIndex;
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0) return 0.0;
+        let diff = itemIndex - dockContainer.effectiveHoveredIndex;
         if (diff === 0) return 0.0;
         let sign = diff > 0 ? 1.0 : -1.0;
         let d = Math.abs(diff);
@@ -90,10 +90,10 @@ Item {
     }
 
     property real animLift: {
-        if (!canHoverScale || dockContainer.hoveredItemIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
+        if (!canHoverScale || dockContainer.effectiveHoveredIndex < 0 || dockWindow.dockHoverLift <= 0) return 0.0;
         let maxLift = dockWindow.s(dockWindow.dockHoverLift);
         if (maxHoverScale <= 1.001) {
-            let diff = Math.abs(dockButton.itemIndex - dockContainer.hoveredItemIndex);
+            let diff = Math.abs(dockButton.itemIndex - dockContainer.effectiveHoveredIndex);
             if (diff === 0) return maxLift;
             if (dockWindow.dockCascadeScale) {
                 if (diff === 1) return maxLift * 0.45;
@@ -160,6 +160,21 @@ Item {
         height: dockButton.btnSize
         z: btnMa.drag.active ? 999999 : 1
 
+        property real entranceProgress: dockWindow.initialized ? 0.0 : 1.0
+
+        NumberAnimation on entranceProgress {
+            running: dockWindow.initialized
+            from: 0.0
+            to: 1.0
+            duration: 220
+            easing.type: Easing.OutBack
+            easing.overshoot: 1.15
+        }
+
+        transformOrigin: Item.Center
+        scale: btnMa.drag.active ? 1.15 : entranceProgress
+        opacity: btnMa.drag.active ? 0.92 : Math.min(1.0, entranceProgress * 1.5)
+
         transform: Translate {
             id: buttonTransform
             x: dockButton.currentOffsetX
@@ -220,8 +235,8 @@ Item {
 
             SequentialAnimation {
                 id: btnPopAnim
-                NumberAnimation { target: dockButton; property: "popScale"; to: 1.1; duration: 110; easing.type: Easing.OutQuad }
-                NumberAnimation { target: dockButton; property: "popScale"; to: 1.0; duration: 400; easing.type: Easing.OutQuint }
+                NumberAnimation { target: dockButton; property: "popScale"; to: 1.08; duration: 100; easing.type: Easing.OutQuad }
+                NumberAnimation { target: dockButton; property: "popScale"; to: 1.0; duration: 220; easing.type: Easing.OutQuad }
             }
 
             Image {
@@ -290,21 +305,15 @@ Item {
                 NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
             }
 
-            anchors.horizontalCenter: !dockWindow.isVertical ? parent.horizontalCenter : undefined
-            anchors.verticalCenter: dockWindow.isVertical ? parent.verticalCenter : undefined
-
-            anchors.bottom: dockWindow.dockPosition === "bottom" ? parent.bottom : undefined
-            anchors.top: dockWindow.dockPosition === "top" ? parent.top : undefined
-            anchors.left: dockWindow.dockPosition === "left" ? parent.left : undefined
-            anchors.right: dockWindow.dockPosition === "right" ? parent.right : undefined
-
-            anchors.bottomMargin: dockWindow.dockPosition === "bottom" ? dockWindow.s(2) : 0
-            anchors.topMargin: dockWindow.dockPosition === "top" ? dockWindow.s(2) : 0
-            anchors.leftMargin: dockWindow.dockPosition === "left" ? dockWindow.s(2) : 0
-            anchors.rightMargin: dockWindow.dockPosition === "right" ? dockWindow.s(2) : 0
-
             width: dockWindow.isVertical ? dockWindow.s(4) : contentRow.implicitWidth
             height: dockWindow.isVertical ? contentCol.implicitHeight : dockWindow.s(4)
+
+            x: dockWindow.isVertical
+                ? (dockWindow.dockPosition === "left" ? dockWindow.s(2) : Math.round(parent.width - width - dockWindow.s(2)))
+                : Math.round((parent.width - width) / 2)
+            y: !dockWindow.isVertical
+                ? (dockWindow.dockPosition === "top" ? dockWindow.s(2) : Math.round(parent.height - height - dockWindow.s(2)))
+                : Math.round((parent.height - height) / 2)
 
             transform: Translate {
                 x: {
@@ -397,6 +406,9 @@ Item {
 
             onEntered: {
                 dockContainer.cancelHoverReset();
+                if (dockContainer.clickedItemIndex >= 0) {
+                    dockContainer.cancelClickFeedback();
+                }
                 if (dockButton.canHoverScale) {
                     dockContainer.hoveredItemIndex = dockButton.itemIndex;
                     dockContainer.hoveredButton = dockButton;
@@ -487,6 +499,7 @@ Item {
 
                 if (mouse.button === Qt.MiddleButton) {
                     btnPopAnim.start();
+                    dockContainer.triggerClickFeedback(dockButton);
                     dockButton.flashOpacity = 0.4;
                     btnFlashAnim.start();
                     if (typeof Sounds !== "undefined") Sounds.playSfx("reusables/iconbutton/click.wav");
@@ -550,6 +563,7 @@ Item {
                     }
 
                     btnPopAnim.start();
+                    dockContainer.triggerClickFeedback(dockButton);
                     dockButton.flashOpacity = 0.4;
                     btnFlashAnim.start();
                     if (typeof Sounds !== "undefined") Sounds.playSfx("reusables/iconbutton/click.wav");

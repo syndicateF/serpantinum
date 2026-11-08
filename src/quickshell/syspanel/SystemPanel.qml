@@ -318,7 +318,7 @@ Item {
                     root.exitCallback = null;
                     cb();
                 } else {
-                    PopupController.close();
+                    Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "close"]);
                 }
             }
         }

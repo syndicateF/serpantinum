@@ -176,15 +176,15 @@ BarFaceBase {
             //     color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isSoundActive ? ThemeBackend.mauve : ThemeBackend.subtext0)
             //     Behavior on color { ColorAnimation { duration: 150 } }
             // }
-            Text {
+            PanelIcon {
                 id: textIcon
                 anchors.centerIn: parent
-                text: root.volIcon
+                icon: root.volIcon
                 // font.family: ThemeBackend.iconFont
-                // font.pixelSize: s(root.isCompact ? 14 : 15)
+                size: s(root.isCompact ? 14 : 15)
                 // horizontalAlignment: Text.AlignHCenter
                 // verticalAlignment: Text.AlignVCenter
-                color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isSoundActive ? ThemeBackend.mauve : ThemeBackend.subtext0)
+                color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.peach, 1.15) : (root.isSoundActive ? ThemeBackend.peach : ThemeBackend.subtext0)
                 // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
@@ -224,8 +224,8 @@ BarFaceBase {
             buttonText: root.showPercent ? root.volPercent : ""
             textFontSize: s(root.isCompact ? 11 : 12)
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            accentColor: isActive ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface1, 1.12) : ThemeBackend.surface1)
-            textColor: isActive ? ThemeBackend.base : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
+            accentColor: root.getPillAccentColor(ThemeBackend.peach, isActive, ThemeBackend.surface1)
+            textColor: root.getPillTextColor(ThemeBackend.peach, isActive, root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
 
             property real targetWidth: (root.showIcon || root.showPercent) ? implicitWidth : 0
             width: targetWidth
@@ -266,14 +266,14 @@ BarFaceBase {
     Component {
         id: sideButtonComponent
 
-        IconButton {
+        ClickButton {
             width: s(root.isCompact ? 28 : 30)
             height: (root.showIcon || root.showPercent) ? s(root.isCompact ? 28 : 30) : 0
             cornerRadius: Math.max(0, ThemeBackend.borderRadius - s(2))
             buttonIcon: root.showIcon ? root.volIcon : ""
             iconFontSize: s(root.isCompact ? 14 : 15)
-            accentColor: root.isSoundActive ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface1, 1.12) : ThemeBackend.surface1)
-            textColor: root.isSoundActive ? ThemeBackend.base : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
+            accentColor: root.getPillAccentColor(ThemeBackend.mauve, root.isSoundActive, ThemeBackend.surface1)
+            textColor: root.getPillTextColor(ThemeBackend.mauve, root.isSoundActive, root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
             onClicked: if (!root.isPreview) PopupController.toggle("volume")
         }
     }

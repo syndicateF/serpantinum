@@ -68,7 +68,8 @@ GuideTab {
         if (rootObj && typeof rootObj.closePopup === "function") {
             rootObj.closePopup();
         } else {
-            PopupController.close();
+            let dir = (typeof Caching !== "undefined" && Caching.serpantinumDir) ? Caching.serpantinumDir : "";
+            Quickshell.execDetached(["bash", dir ? (dir + "/scripts/qs_manager.sh") : "qs_manager.sh", "close"]);
         }
     }
 

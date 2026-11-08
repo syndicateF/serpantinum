@@ -15,6 +15,41 @@ Item {
     readonly property var barWindow: activeTarget ? activeTarget.barWindow : null
     readonly property bool isPreview: activeTarget ? Boolean(activeTarget.isPreview) : false
 
+    readonly property string pillColorStyle: {
+        if (barWindow && barWindow.pillColorStyle !== undefined) return barWindow.pillColorStyle;
+        let dummy = configRevision;
+        if (typeof Config !== "undefined" && Config.rawSettings && Config.rawSettings.bar && Config.rawSettings.bar.pillColorStyle !== undefined) {
+            return Config.rawSettings.bar.pillColorStyle;
+        }
+        return "solid";
+    }
+    readonly property bool isTintedPill: pillColorStyle === "tinted"
+
+    function getPillAccentColor(accentColor, isActive, inactiveBase) {
+        let baseSurface = inactiveBase !== undefined 
+            ? inactiveBase
+            : ThemeBackend.surface0;
+        if (!isActive) return baseSurface;
+
+        let activeAccent = accentColor;
+        if (isTintedPill) {
+            return Qt.alpha(activeAccent, 0.1);
+        }
+        return activeAccent;
+    }
+
+    function getPillTextColor(accentColor, isActive, inactiveText) {
+        if (!isActive) {
+            return inactiveText !== undefined
+                ? inactiveText
+                : ThemeBackend.text;
+        }
+        if (isTintedPill) {
+            return accentColor;
+        }
+        return ThemeBackend.base;
+    }
+
     function s(val) {
         if (barWindow && typeof barWindow.s === "function") return barWindow.cs(val);
         if (activeTarget && typeof activeTarget.s === "function") return activeTarget.s(val);

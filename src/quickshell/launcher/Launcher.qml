@@ -1122,7 +1122,11 @@ PanelWindow {
     }
 
     function launchWidget(widgetName, widgetTarget) {
-        PopupController.open(widgetTarget);
+        if (Caching.qsDir) {
+            Quickshell.execDetached(["bash", Caching.qsDir + "/../scripts/qs_manager.sh", "open", widgetTarget]);
+        } else {
+            Quickshell.execDetached(["qs_manager", "open", widgetTarget]);
+        }
         closeLauncher();
     }
 

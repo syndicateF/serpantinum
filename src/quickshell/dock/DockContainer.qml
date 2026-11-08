@@ -37,12 +37,24 @@ Item {
     }
 
     readonly property int placeholderCount: 6
+    readonly property int activeRunningAppsCount: {
+        if (!dockWindow.showRunningApps || dockWindow.editMode) return 0;
+        let count = 0;
+        let model = dockWindow.runningAppsModel;
+        if (model) {
+            for (let i = 0; i < model.count; i++) {
+                let it = model.get(i);
+                if (it && !it.is_closing) count++;
+            }
+        }
+        return count;
+    }
     property int totalItemCount: {
         if (dockWindow.editMode) {
             return dockWindow.dockAppsModel.count > 0 ? dockWindow.dockAppsModel.count : placeholderCount;
         }
         let pinned = dockWindow.dockAppsModel.count;
-        let running = dockWindow.showRunningApps ? dockWindow.runningAppsModel.count : 0;
+        let running = activeRunningAppsCount;
         let hasSep = (pinned > 0 && running > 0);
         return pinned + (hasSep ? 1 : 0) + running;
     }
@@ -60,9 +72,48 @@ Item {
     property var hoveredButton: null
     property string hoveredAppName: ""
 
+    property int clickedItemIndex: -1
+    property var clickedButton: null
+
+    readonly property int effectiveHoveredIndex: {
+        if (hoveredItemIndex >= 0) return hoveredItemIndex;
+        if (clickedButton !== null && clickedButton.itemIndex !== undefined) return clickedButton.itemIndex;
+        if (clickedItemIndex >= 0) return clickedItemIndex;
+        return -1;
+    }
+
+    Timer {
+        id: clickHoldTimer
+        interval: 320
+        repeat: false
+        onTriggered: {
+            containerRoot.clickedButton = null;
+            containerRoot.clickedItemIndex = -1;
+            if (!dockHover.hovered) {
+                containerRoot.hoveredItemIndex = -1;
+                containerRoot.hoveredButton = null;
+                containerRoot.hoveredAppName = "";
+            }
+        }
+    }
+
+    function triggerClickFeedback(btn) {
+        if (!btn) return;
+        containerRoot.clickedButton = btn;
+        containerRoot.clickedItemIndex = btn.itemIndex !== undefined ? btn.itemIndex : -1;
+        clickHoldTimer.restart();
+    }
+
+    function cancelClickFeedback() {
+        containerRoot.clickedButton = null;
+        containerRoot.clickedItemIndex = -1;
+        clickHoldTimer.stop();
+    }
+
     readonly property bool canShowTooltip: {
         if (!dockWindow.initialized || dockWindow.editMode || dockWindow.positionChanging) return false;
         if (typeof DockAppMenuController !== "undefined" && DockAppMenuController.isVisible) return false;
+        if (clickedItemIndex >= 0) return false;
         return hoveredItemIndex >= 0 && hoveredButton !== null && hoveredAppName !== "";
     }
 
@@ -97,9 +148,11 @@ Item {
         interval: 80
         repeat: false
         onTriggered: {
-            containerRoot.hoveredItemIndex = -1;
-            containerRoot.hoveredButton = null;
-            containerRoot.hoveredAppName = "";
+            if (containerRoot.clickedItemIndex < 0) {
+                containerRoot.hoveredItemIndex = -1;
+                containerRoot.hoveredButton = null;
+                containerRoot.hoveredAppName = "";
+            }
         }
     }
 
@@ -151,7 +204,7 @@ Item {
 
     // Menghitung kebutuhan ekstra lebar yang SINKRON 1-to-1 dengan pergeseran animSpread
     readonly property real hoverExpansionLength: {
-        if (dockWindow.editMode || hoveredItemIndex < 0) return 0.0;
+        if (dockWindow.editMode || effectiveHoveredIndex < 0) return 0.0;
         let delta = Math.max(0.0, dockWindow.dockHoverScaleMultiplier - 1.0);
         if (delta <= 0.001) return 0.0;
 
@@ -173,7 +226,7 @@ Item {
             return cnt * itemSize + Math.max(0, cnt - 1) * itemSpacing;
         }
         let pinned = dockWindow.dockAppsModel.count;
-        let running = (dockWindow.showRunningApps && !dockWindow.editMode) ? dockWindow.runningAppsModel.count : 0;
+        let running = activeRunningAppsCount;
         let hasSep = (pinned > 0 && running > 0);
         let totalCount = pinned + running + (hasSep ? 1 : 0);
         if (dockWindow.enableScrolling && totalCount > 0) {
@@ -254,20 +307,95 @@ Item {
         }
     }
 
-    transform: Translate {
-        id: dockTransform
-        x: (!dockWindow.sameSideAsBar && dockWindow.isVertical) ? (dockWindow.isRevealed ? 0 : containerRoot.hideOffset) : 0
-        y: (!dockWindow.sameSideAsBar && !dockWindow.isVertical) ? (dockWindow.isRevealed ? 0 : containerRoot.hideOffset) : 0
+    property real posAnimProgress: 1.0
+    opacity: posAnimProgress
 
-        Behavior on x {
-            enabled: dockWindow.initialized && !dockWindow.positionChanging && !dockWindow.sameSideAsBar
-            NumberAnimation { duration: 280; easing.type: Easing.OutQuint }
-        }
-        Behavior on y {
-            enabled: dockWindow.initialized && !dockWindow.positionChanging && !dockWindow.sameSideAsBar
-            NumberAnimation { duration: 280; easing.type: Easing.OutQuint }
+    readonly property real posOffsetDistance: {
+        if (dockWindow.isVertical) {
+            return width + dockWindow.barOffset + dockWindow.effectiveMargin + dockWindow.s(40);
+        } else {
+            return height + dockWindow.barOffset + dockWindow.effectiveMargin + dockWindow.s(40);
         }
     }
+
+    readonly property real posTransitionOffsetX: {
+        if (posAnimProgress >= 0.999) return 0;
+        let dist = (1.0 - posAnimProgress) * posOffsetDistance;
+        if (dockWindow.dockPosition === "left") return -dist;
+        if (dockWindow.dockPosition === "right") return dist;
+        return 0;
+    }
+
+    readonly property real posTransitionOffsetY: {
+        if (posAnimProgress >= 0.999) return 0;
+        let dist = (1.0 - posAnimProgress) * posOffsetDistance;
+        if (dockWindow.dockPosition === "top") return -dist;
+        if (dockWindow.dockPosition === "bottom") return dist;
+        return 0;
+    }
+
+    SequentialAnimation {
+        id: posTransitionSeq
+        property string pendingPos: ""
+
+        NumberAnimation {
+            target: containerRoot
+            property: "posAnimProgress"
+            to: 0.0
+            duration: 180
+            easing.type: Easing.InQuad
+        }
+
+        ScriptAction {
+            script: {
+                dockWindow.dockPosition = posTransitionSeq.pendingPos;
+                containerRoot.scrollIndex = 0;
+                containerRoot.hoveredItemIndex = -1;
+                containerRoot.cancelClickFeedback();
+            }
+        }
+
+        PauseAnimation { duration: 25 }
+
+        NumberAnimation {
+            target: containerRoot
+            property: "posAnimProgress"
+            to: 1.0
+            duration: 260
+            easing.type: Easing.OutQuint
+        }
+    }
+
+    function startPositionTransition(newPos) {
+        if (!dockWindow.initialized) {
+            dockWindow.dockPosition = newPos;
+            return;
+        }
+        posTransitionSeq.pendingPos = newPos;
+        posTransitionSeq.restart();
+    }
+
+    transform: [
+        Translate {
+            id: dockTransform
+            x: (!dockWindow.sameSideAsBar && dockWindow.isVertical) ? (dockWindow.isRevealed ? 0 : containerRoot.hideOffset) : 0
+            y: (!dockWindow.sameSideAsBar && !dockWindow.isVertical) ? (dockWindow.isRevealed ? 0 : containerRoot.hideOffset) : 0
+
+            Behavior on x {
+                enabled: dockWindow.initialized && !dockWindow.positionChanging && !dockWindow.sameSideAsBar
+                NumberAnimation { duration: 280; easing.type: Easing.OutQuint }
+            }
+            Behavior on y {
+                enabled: dockWindow.initialized && !dockWindow.positionChanging && !dockWindow.sameSideAsBar
+                NumberAnimation { duration: 280; easing.type: Easing.OutQuint }
+            }
+        },
+        Translate {
+            id: posTransitionTransform
+            x: containerRoot.posTransitionOffsetX
+            y: containerRoot.posTransitionOffsetY
+        }
+    ]
 
     HoverHandler {
         id: dockHover
@@ -275,8 +403,10 @@ Item {
         margin: dockWindow.effectiveHoverExpansion
         onHoveredChanged: {
             if (!hovered) {
-                containerRoot.hoveredItemIndex = -1;
-                containerRoot.cancelHoverReset();
+                if (containerRoot.clickedItemIndex < 0) {
+                    containerRoot.hoveredItemIndex = -1;
+                    containerRoot.cancelHoverReset();
+                }
             }
         }
     }
@@ -429,8 +559,8 @@ Item {
 
             GridLayout {
                 id: dockLayout
-                columns: dockWindow.isVertical ? 1 : Math.max(1, containerRoot.totalItemCount)
-                rows: dockWindow.isVertical ? Math.max(1, containerRoot.totalItemCount) : 1
+                columns: dockWindow.isVertical ? 1 : Math.max(1, dockWindow.dockAppsModel.count + (dockWindow.showRunningApps ? dockWindow.runningAppsModel.count : 0) + 2)
+                rows: dockWindow.isVertical ? Math.max(1, dockWindow.dockAppsModel.count + (dockWindow.showRunningApps ? dockWindow.runningAppsModel.count : 0) + 2) : 1
                 columnSpacing: containerRoot.itemSpacing
                 rowSpacing: containerRoot.itemSpacing
                 width: implicitWidth
@@ -485,9 +615,15 @@ Item {
 
                 Item {
                     id: dockSeparator
-                    visible: dockWindow.showRunningApps && dockWindow.runningAppsModel.count > 0 && dockWindow.dockAppsModel.count > 0 && !dockWindow.editMode
-                    Layout.preferredWidth: visible ? (dockWindow.isVertical ? dockWindow.s(dockWindow.dockElementSize) : dockWindow.s(1)) : 0
-                    Layout.preferredHeight: visible ? (dockWindow.isVertical ? dockWindow.s(1) : dockWindow.s(dockWindow.dockElementSize)) : 0
+                    property real sepProgress: (dockWindow.showRunningApps && containerRoot.activeRunningAppsCount > 0 && dockWindow.dockAppsModel.count > 0 && !dockWindow.editMode) ? 1.0 : 0.0
+                    Behavior on sepProgress {
+                        enabled: dockWindow.initialized && !dockWindow.positionChanging
+                        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                    }
+
+                    visible: dockWindow.showRunningApps && (containerRoot.activeRunningAppsCount > 0 || sepProgress > 0.01 || dockWindow.runningAppsModel.count > 0) && dockWindow.dockAppsModel.count > 0 && !dockWindow.editMode
+                    Layout.preferredWidth: visible ? (dockWindow.isVertical ? dockWindow.s(dockWindow.dockElementSize) : Math.round(dockWindow.s(1) * sepProgress)) : 0
+                    Layout.preferredHeight: visible ? (dockWindow.isVertical ? Math.round(dockWindow.s(1) * sepProgress) : dockWindow.s(dockWindow.dockElementSize)) : 0
                     Layout.maximumWidth: visible ? -1 : 0
                     Layout.maximumHeight: visible ? -1 : 0
                     Layout.alignment: Qt.AlignCenter
@@ -498,8 +634,8 @@ Item {
                     readonly property int btnSize: dockWindow.s(dockWindow.dockElementSize)
 
                     property real animSpread: {
-                        if (dockWindow.editMode || containerRoot.hoveredItemIndex < 0) return 0.0;
-                        let diff = itemIndex - containerRoot.hoveredItemIndex;
+                        if (dockWindow.editMode || containerRoot.effectiveHoveredIndex < 0) return 0.0;
+                        let diff = itemIndex - containerRoot.effectiveHoveredIndex;
                         if (diff === 0) return 0.0;
                         let sign = diff > 0 ? 1.0 : -1.0;
                         let d = Math.abs(diff);
@@ -534,17 +670,22 @@ Item {
                         NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
                     }
 
-                    transform: Translate {
-                        x: dockSeparator.currentOffsetX
-                        y: dockSeparator.currentOffsetY
-                    }
+                    Item {
+                        id: sepFloatWrapper
+                        anchors.fill: parent
+                        opacity: dockSeparator.sepProgress
+                        transform: Translate {
+                            x: dockSeparator.currentOffsetX
+                            y: dockSeparator.currentOffsetY
+                        }
 
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: dockWindow.isVertical ? Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.5) : 1
-                        height: dockWindow.isVertical ? 1 : Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.5)
-                        radius: 1
-                        color: Qt.alpha(ThemeBackend.surface2, 0.7)
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: dockWindow.isVertical ? Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.5) : 1
+                            height: dockWindow.isVertical ? 1 : Math.round(dockWindow.s(dockWindow.dockElementSize) * 0.5)
+                            radius: 1
+                            color: Qt.alpha(ThemeBackend.surface2, 0.7)
+                        }
                     }
                 }
 

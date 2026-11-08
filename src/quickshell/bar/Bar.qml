@@ -73,7 +73,10 @@ Variants {
                 if (typeof Config !== "undefined" && Config.dataReady) {
                     barWindowRoot.configRevision++;
                 }
+                ShellSurfaces.register("bars", modelData.name, barWindowRoot);
             }
+
+            Component.onDestruction: ShellSurfaces.unregister("bars", modelData.name, barWindowRoot)
 
             property string barStyle: {
                 let dummy = configRevision;
@@ -91,6 +94,10 @@ Variants {
             property bool distinctPills: {
                 let dummy = configRevision;
                 return (typeof Config !== "undefined" && Config.rawSettings && Config.rawSettings.bar && Config.rawSettings.bar.distinctPills !== undefined) ? Config.rawSettings.bar.distinctPills : false;
+            }
+            property string pillColorStyle: {
+                let dummy = configRevision;
+                return (typeof Config !== "undefined" && Config.rawSettings && Config.rawSettings.bar && Config.rawSettings.bar.pillColorStyle !== undefined) ? Config.rawSettings.bar.pillColorStyle : "solid";
             }
             property bool centerByEdges: {
                 let dummy = configRevision;
@@ -362,6 +369,8 @@ Variants {
             property bool fastPollerLoaded: false
             property bool isDataReady: fastPollerLoaded
             Timer { interval: 400; running: true; onTriggered: barWindowRoot.isDataReady = true }
+
+            readonly property Item snapshotItem: isVertical ? verticalLoader : horizontalLoader
 
             Loader {
                 id: verticalLoader

@@ -152,8 +152,9 @@ BarFaceBase {
                 font.pixelSize: s(root.isCompact ? 14 : 15)
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.text, 1.15) : ThemeBackend.subtext0
-                Behavior on color { ColorAnimation { duration: 150 } }
+                color: ThemeBackend.subtext0
+                // color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.text, 1.15) : ThemeBackend.subtext0
+                // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
 

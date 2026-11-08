@@ -64,7 +64,31 @@ BarFaceBase {
     readonly property bool isActivelyCharging: isCharging && UPower.displayDevice.changeRate > 0.5
 
     readonly property string batStatus: isPreview ? "Discharging" : (UPower.displayDevice.ready ? (UPower.displayDevice.state === UPowerDeviceState.FullyCharged ? "Full" : (UPower.displayDevice.state === UPowerDeviceState.Charging ? "Charging" : "Unknown")) : "Unknown")
-    readonly property string batIcon: isDesktop ? "󰐥" : (isCharging ? "󰂄" : (batCap > 20 ? "󰁹" : "󰂃"))
+    // readonly property string batIcon: isDesktop ? "󰐥" : (isCharging ? "󰂄" : (batCap > 20 ? "󰁹" : "󰂃"))
+    property string batIcon: {
+        if (isDesktop) return "ac-adapter-symbolic";
+        let percent = parseInt(batPercent) || 100;
+        let status = batStatus;
+        if (status === "Charging" || status === "Full") {
+            if (percent >= 90) return "battery-full-charging-symbolic";
+            if (percent >= 80) return "battery-good-charging-symbolic";
+            if (percent >= 60) return "battery-good-charging-symbolic";
+            if (percent >= 40) return "battery-low-charging-symbolic";
+            if (percent >= 20) return "battery-low-charging-symbolic";
+            return "battery-empty-charging-symbolic";
+        } else {
+            if (percent >= 90) return "battery-full-symbolic";
+            if (percent >= 80) return "battery-good-symbolic";
+            if (percent >= 70) return "battery-good-symbolic";
+            if (percent >= 60) return "battery-good-symbolic";
+            if (percent >= 50) return "battery-low-symbolic";
+            if (percent >= 40) return "battery-low-symbolic";
+            if (percent >= 30) return "battery-low-symbolic";
+            if (percent >= 20) return "battery-low-symbolic";
+            if (percent >= 10) return "battery-empty-symbolic";
+            return "battery-empty-symbolic";
+        }
+    }
 
     property real wavePhase: 0.8
 
@@ -108,7 +132,7 @@ BarFaceBase {
 
     property color batDynamicColor: {
         if (isDesktop) return ThemeBackend.red;
-        if (isCharging) return isVertical ? ThemeBackend.green : Qt.lighter(ThemeBackend.green, 1.15);
+        if (isCharging) return ThemeBackend.green;
         if (batCap <= 15) return ThemeBackend.red;
         if (batCap <= 25) return ThemeBackend.peach;
         return ThemeBackend.teal;
@@ -209,16 +233,16 @@ BarFaceBase {
             width: root.isVertical ? textIcon.implicitWidth : s(root.isCompact ? 18 : 20)
             height: root.isVertical ? textIcon.implicitHeight : width
 
-            Text {
+            PanelIcon {
                 id: textIcon
                 anchors.centerIn: parent
-                text: root.batIcon
-                font.family: ThemeBackend.iconFont
-                font.pixelSize: root.isVertical ? (root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 13 : 14)) : s(root.isCompact ? 14 : 15)
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+                icon: root.batIcon
+                // font.family: ThemeBackend.iconFont
+                size: root.isVertical ? (root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 13 : 14)) : s(root.isCompact ? 14 : 15)
+                // horizontalAlignment: Text.AlignHCenter
+                // verticalAlignment: Text.AlignVCenter
                 color: textMouseArea.containsMouse ? Qt.lighter(root.batDynamicColor, 1.15) : root.batDynamicColor
-                Behavior on color { ColorAnimation { duration: 150 } }
+                // Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
 
@@ -259,7 +283,7 @@ BarFaceBase {
                 iconFontSize: s(root.isCompact ? 14 : 15)
                 buttonText: (!root.isVertical && root.effectiveShowPercent) ? root.batPercent : ""
                 textFontSize: s(root.isCompact ? 11 : 12)
-                accentColor: Qt.lighter(ThemeBackend.surface0, root.isCompact && !root.lockLook ? 1.18 : 1.28)
+                accentColor: ThemeBackend.surface0
                 textColor: root.lockLook ? root.lockBatColor : root.batDynamicColor
                 onClicked: if (!root.isPreview) PopupController.toggle("system")
             }
@@ -306,18 +330,16 @@ BarFaceBase {
                     font.bold: true
                 }
 
-                Text {
-                    id: dummyIconMetrics
-                    visible: false
-                    text: (!root.isDesktop && root.batStyle === "minimal" && root.isCharging) ? "󱐋" : (root.batIcon ? root.batIcon : "󰁹")
-                    font.family: ThemeBackend.fontFamily
-                    font.pixelSize: root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 12 : 13.5)
-                }
-
-                property real fullWidthWithPercent: dummyIconMetrics.implicitWidth + s(root.isCompact ? 5 : 6) + dummyPercentMetrics.implicitWidth + s(root.isCompact ? 16 : 18)
+                readonly property real batIconSize: root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 12 : 13.5)
+                readonly property real iconWidth: root.effectiveShowIcon ? batIconSize : 0
+                readonly property real percentWidth: root.effectiveShowPercent ? dummyPercentMetrics.implicitWidth : 0
+                readonly property real itemSpacing: (root.effectiveShowIcon && root.effectiveShowPercent && !root.isDesktop) ? s(root.isCompact ? 5 : 6) : 0
+                readonly property real horizontalPadding: s(root.isCompact ? 8 : 10) * 2
 
                 height: root.pillHeight
-                property real targetWidth: root.isDesktop ? s(root.isCompact ? 30 : 32) : (root.effectiveShowPercent ? Math.max(fullWidthWithPercent, contentRow.implicitWidth + s(root.isCompact ? 16 : 18)) : fullWidthWithPercent)
+                property real targetWidth: root.isDesktop
+                    ? s(root.isCompact ? 30 : 32)
+                    : Math.max(s(root.isCompact ? 32 : 36), iconWidth + itemSpacing + percentWidth + horizontalPadding)
                 width: targetWidth
                 Behavior on width { NumberAnimation { duration: 480; easing.type: Easing.OutQuint } }
 
@@ -365,21 +387,22 @@ BarFaceBase {
                     vertical: 0.0
                     color1: (root.batStyle === "minimal") ? root.calmBatFillColor : Qt.lighter(batPill.accentColor, 1.20)
                     color2: (root.batStyle === "minimal") ? root.calmBatFillColor : batPill.accentColor
-                    opacity: batPillGlass.active ? 0.0 : 1.0
+                    // opacity: batPillGlass.active ? 0.0 : 1.0
+                    opacity: batPillGlass.active ? 0.0 : (root.isTintedPill ? 0.1 : 1.0)
                 }
 
-                Row {
+              Row {
                     id: contentRow
                     anchors.centerIn: parent
                     spacing: root.isDesktop ? 0 : s(root.isCompact ? 5 : 6)
 
-                    Text {
-                        id: batIconText
+                    PanelIcon {
+                        id: batIconItem
                         visible: root.effectiveShowIcon
-                        text: (!root.isDesktop && root.batStyle === "minimal" && root.isCharging) ? "󱐋" : root.batIcon
-                        font.family: ThemeBackend.fontFamily
-                        font.pixelSize: root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 12 : 13.5)
-                        color: root.isDesktop ? ThemeBackend.red : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
+                        icon: root.batIcon
+                        size: batPill.batIconSize
+                        // color: root.isDesktop ? ThemeBackend.red : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
+                        color: root.isDesktop ? ThemeBackend.red : (root.isTintedPill ? root.batDynamicColor : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0))
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -390,7 +413,8 @@ BarFaceBase {
                         font.family: ThemeBackend.fontFamily
                         font.pixelSize: s(root.isCompact ? 11 : 12.6)
                         font.bold: true
-                        color: ThemeBackend.text
+                        // color: ThemeBackend.text
+                        color: root.isTintedPill ? root.batDynamicColor : ThemeBackend.text
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -409,12 +433,16 @@ BarFaceBase {
                         y: contentRow.y
                         spacing: contentRow.spacing
 
-                        Text {
-                            visible: batIconText.visible
-                            text: batIconText.text
-                            font.family: batIconText.font.family
-                            font.pixelSize: batIconText.font.pixelSize
-                            color: batPillGlass.active ? ThemeBackend.text : Qt.rgba(ThemeBackend.crust.r, ThemeBackend.crust.g, ThemeBackend.crust.b, 0.85)
+                        PanelIcon {
+                            visible: batIconItem.visible
+                            icon: batIconItem.icon
+                            size: batIconItem.size
+                            // color: batPillGlass.active ? ThemeBackend.text : Qt.rgba(ThemeBackend.crust.r, ThemeBackend.crust.g, ThemeBackend.crust.b, 0.85)
+                            color: batPillGlass.active 
+    ? ThemeBackend.text 
+    : (root.isTintedPill 
+        ? root.batDynamicColor 
+        : Qt.rgba(ThemeBackend.crust.r, ThemeBackend.crust.g, ThemeBackend.crust.b, 0.85))
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
@@ -424,7 +452,10 @@ BarFaceBase {
                             font.family: batPercentText.font.family
                             font.pixelSize: batPercentText.font.pixelSize
                             font.bold: batPercentText.font.bold
-                            color: batPillGlass.active ? ThemeBackend.text : ThemeBackend.crust
+                            // color: batPillGlass.active ? ThemeBackend.text : ThemeBackend.crust
+                            color: batPillGlass.active 
+    ? ThemeBackend.text 
+    : (root.isTintedPill ? root.batDynamicColor : ThemeBackend.crust)
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -561,15 +592,14 @@ BarFaceBase {
                     id: sideContentBox
                     anchors.centerIn: parent
                     visible: root.effectiveShowIcon
-                    width: sideBatIconText.implicitWidth
-                    height: sideBatIconText.implicitHeight
+                    width: sideBatIconItem.size
+                    height: sideBatIconItem.size
 
-                    Text {
-                        id: sideBatIconText
+                    PanelIcon {
+                        id: sideBatIconItem
                         anchors.centerIn: parent
-                        text: (!root.isDesktop && root.batStyle === "minimal" && root.isCharging) ? "󱐋" : root.batIcon
-                        font.family: ThemeBackend.fontFamily
-                        font.pixelSize: root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 12 : 13)
+                        icon: root.batIcon
+                        size: root.isDesktop ? s(root.isCompact ? 15 : 16) : s(root.isCompact ? 12 : 13)
                         color: root.isDesktop ? ThemeBackend.red : (root.isCompact ? ThemeBackend.text : ThemeBackend.subtext0)
                     }
                 }
@@ -583,12 +613,11 @@ BarFaceBase {
                     clip: true
                     visible: !root.isDesktop && root.effectiveShowIcon && batBtn.fillRatio > 0
 
-                    Text {
+                    PanelIcon {
                         x: sideContentBox.x
                         y: sideContentBox.y - batBtn.fillY
-                        text: sideBatIconText.text
-                        font.family: sideBatIconText.font.family
-                        font.pixelSize: sideBatIconText.font.pixelSize
+                        icon: sideBatIconItem.icon
+                        size: sideBatIconItem.size
                         color: batBtnGlass.active ? ThemeBackend.text : Qt.rgba(ThemeBackend.crust.r, ThemeBackend.crust.g, ThemeBackend.crust.b, 0.85)
                     }
                 }

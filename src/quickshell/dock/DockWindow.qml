@@ -46,7 +46,7 @@ DockWindowApps {
 
     readonly property real hoverExpansion: Math.round(Math.max(s(24), s(dockElementSize) * (dockHoverScaleMultiplier - 1.0) + s(dockHoverLift)))
 
-    readonly property bool isHovering: dockContainerItem.hoveredItemIndex !== -1
+    readonly property bool isHovering: dockContainerItem.effectiveHoveredIndex !== -1
     property bool isMagnifying: isHovering || magShrinkTimer.running
 
     onIsHoveringChanged: {
@@ -115,10 +115,20 @@ DockWindowApps {
         onTriggered: dockWindowRoot.positionChanging = false
     }
 
+    onRequestedDockPositionChanged: {
+        if (!dockWindowRoot.initialized) {
+            dockPosition = requestedDockPosition;
+            return;
+        }
+        if (dockPosition === requestedDockPosition) return;
+        dockContainerItem.startPositionTransition(requestedDockPosition);
+    }
+
     onDockPositionChanged: {
         dockWindowRoot.positionChanging = true;
         dockContainerItem.scrollIndex = 0;
         dockContainerItem.hoveredItemIndex = -1;
+        dockContainerItem.cancelClickFeedback();
         positionChangeTimer.restart();
     }
 
@@ -242,6 +252,7 @@ DockWindowApps {
     onEditModeChanged: {
         dockWindowRoot._syncRunningApps();
         dockContainerItem.hoveredItemIndex = -1;
+        dockContainerItem.cancelClickFeedback();
         if (editMode) {
             loadAllDesktopApps();
             pickerFocusTimer.restart();
@@ -276,9 +287,11 @@ DockWindowApps {
         loadApps();
         loadAllDesktopApps();
         initTimer.start();
+        ShellSurfaces.register("docks", modelData.name, dockWindowRoot);
     }
 
     Component.onDestruction: {
+        ShellSurfaces.unregister("docks", modelData.name, dockWindowRoot);
         if (Compositor.name === "niri") {
             NiriState.unsubscribe();
         }
@@ -392,9 +405,16 @@ DockWindowApps {
         z: 999999
     }
 
-    DockContainer {
-        id: dockContainerItem
-        dockWindow: dockWindowRoot
+    property alias snapshotItem: dockSnapshotRoot
+
+    Item {
+        id: dockSnapshotRoot
+        anchors.fill: parent
+
+        DockContainer {
+            id: dockContainerItem
+            dockWindow: dockWindowRoot
+        }
     }
 
     DockAppPicker {

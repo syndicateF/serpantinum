@@ -22,6 +22,7 @@ GuideTab {
         "smartAutohide": true,
         "autohideTimeout": 1000,
         "editing": false,
+        "hoverLift": 12,
         "apps": [
             { "name": "Kitty", "comment": "Fast, feature-rich, GPU based terminal", "desktop_id": "kitty.desktop", "icon": "kitty" },
             { "name": "Files", "comment": "Access and organize files", "desktop_id": "ski.desktop", "icon": "ski" }
@@ -30,7 +31,6 @@ GuideTab {
         "enableScrolling": false,
         "visibleElements": 7,
         "hoverScale": 120,
-        "hoverLift": 12,
         "cascadeScale": false,
         "focusRunning": true,
         "showRunningIndicators": true,
@@ -80,7 +80,7 @@ GuideTab {
         dockTabRoot.currentPosition = s.position !== undefined ? s.position : "bottom";
         dockTabRoot.currentOnTop = s.onTop !== undefined ? Boolean(s.onTop) : true;
         dockTabRoot.currentBackground = s.background !== undefined ? Boolean(s.background) : true;
-        dockTabRoot.currentIconBackground = s && (s.iconBackground !== undefined ? Boolean(s.iconBackground) : (s.appTileBackground !== undefined ? Boolean(s.appTileBackground) : true));
+        dockTabRoot.currentIconBackground = s.iconBackground !== undefined ? Boolean(s.iconBackground) : (s.appTileBackground !== undefined ? Boolean(s.appTileBackground) : true);
         dockTabRoot.currentFloating = s.floating !== undefined ? s.floating : false;
         dockTabRoot.currentExclusive = s.exclusive !== undefined ? s.exclusive : (s.exclusiveMode !== undefined ? Boolean(s.exclusiveMode) : false);
         dockTabRoot.currentElementSize = (s.elementSize !== undefined && !isNaN(parseInt(s.elementSize))) ? parseInt(s.elementSize) : 44;
@@ -153,9 +153,6 @@ GuideTab {
     Connections {
         target: typeof Config !== "undefined" ? Config : null
         function onSettingsLoaded() {
-            dockTabRoot.syncSettings();
-          }
-          function onRawSettingsChanged() {
             dockTabRoot.syncSettings();
         }
     }
@@ -697,60 +694,24 @@ GuideTab {
                             onToggled: function(val) {
                                 dockTabRoot.currentBackground = val;
                                 dockTabRoot.updateDockSetting("background", val);
-
-
-
-
-
-
-
-
                             }
                         }
                     }
                 }
-                Item {
-                    id: iconBackgroundWrapper
-                    Layout.fillWidth: true
-                    clip: true
-                    readonly property bool shouldBeOpen: dockTabRoot.currentEnabled || iconBackgroundRow.tempVisible
-                    property real openProgress: shouldBeOpen ? 1 : 0
-                    visible: openProgress > 0.001
-                    implicitHeight: iconBackgroundRow.implicitHeight * openProgress
-                    Behavior on openProgress {
-                        NumberAnimation { duration: 250; easing.type: Easing.InOutCubic }
-                    }
-                    SettingsRow {
+
+                CollapsibleSection {
+                    open: dockTabRoot.currentEnabled || iconBackgroundRow.tempVisible
+                    row: iconBackgroundRow
+
+                    RevealableSettingsRow {
                         id: iconBackgroundRow
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
                         settingId: "dock_icon_background"
                         rootObj: dockTabRoot.rootObj
-                        icon: "󰹯"
-                        title: I18n.t("guide.dock.iconBackground.title", "App icon tile background")
-                        description: I18n.t("guide.dock.iconBackground.desc", "Show individual background tiles behind each dock icon")
-                        property bool tempVisible: false
-                        function checkHighlight() {
-                            let r = effectiveRootObj;
-                            if (!r) return;
-                            if (r.highlightToken === handledHighlightToken) return;
-                            if (r.highlightedSettingId && (r.highlightedSettingId === effectiveSettingId || r.highlightedSettingId === settingId)) {
-                                handledHighlightToken = r.highlightToken;
-                                r.highlightedSettingId = "";
-                                if (!dockTabRoot.currentEnabled) {
-                                    tempVisible = true;
-                                    iconBackgroundCollapseTimer.restart();
-                                }
-                                highlightDelayTimer.restart();
-                            }
-                        }
-                        Timer {
-                            id: iconBackgroundCollapseTimer
-                            interval: 2800
-                            repeat: false
-                            onTriggered: iconBackgroundRow.tempVisible = false
-                        }
+                        icon: "󱂬"
+                        title: I18n.t("guide.dock.icon_background.title", "App tile background")
+                        description: I18n.t("guide.dock.icon_background.desc", "Show background container behind each dock icon")
+                        revealWhenClosed: !dockTabRoot.currentEnabled
+
                         Toggle {
                             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                             checked: dockTabRoot.currentIconBackground
@@ -761,22 +722,6 @@ GuideTab {
                             onToggled: function(val) {
                                 dockTabRoot.currentIconBackground = val;
                                 dockTabRoot.updateDockSetting("iconBackground", val);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                             }
                         }
                     }
@@ -1010,7 +955,7 @@ GuideTab {
                             stepSize: 2
                             defaultValue: 120
                             showValueBubble: true
-                            valueFormatter: function(v) { let val = Math.round(v); return val === 100 ? "100% (Disabled)" : (val + "%"); }
+                            valueFormatter: function(v) { return Math.round(v) === 100 ? "100% (Disabled)" : Math.round(v) + "%" }
                             value: dockTabRoot.currentHoverScale
                             backgroundColor: ThemeBackend.surface0
                             accentColor: ThemeBackend.mauve
@@ -1041,9 +986,9 @@ GuideTab {
                         id: hoverLiftRow
                         settingId: "dock_hover_lift"
                         rootObj: dockTabRoot.rootObj
-                        icon: "󰅃"
-                        title: I18n.t("guide.dock.hover_lift.title", "Hover lift animation")
-                        description: I18n.t("guide.dock.hover_lift.desc", "Vertical lift height of apps when hovering")
+                        icon: "󰞅"
+                        title: I18n.t("guide.dock.hover_lift.title", "Hover vertical lift")
+                        description: I18n.t("guide.dock.hover_lift.desc", "Distance dock items lift upwards when magnified")
                         revealWhenClosed: !dockTabRoot.currentEnabled
 
                         Draggable {
@@ -1052,11 +997,11 @@ GuideTab {
                             implicitWidth: dockTabRoot.rootObj.s(220)
                             implicitHeight: dockTabRoot.rootObj.s(18)
                             from: 0
-                            to: 24
+                            to: 32
                             stepSize: 1
                             defaultValue: 12
                             showValueBubble: true
-                            valueFormatter: function(v) { let val = Math.round(v); return val === 0 ? "Disabled" : (val + " px"); }
+                            valueFormatter: function(v) { return Math.round(v) === 0 ? "0px (Disabled)" : Math.round(v) + "px" }
                             value: dockTabRoot.currentHoverLift
                             backgroundColor: ThemeBackend.surface0
                             accentColor: ThemeBackend.mauve

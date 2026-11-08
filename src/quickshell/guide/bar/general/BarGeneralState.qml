@@ -41,6 +41,7 @@ GuideTab {
         return "modular";
     }
     property bool distinctPills: barSettings.distinctPills !== undefined ? barSettings.distinctPills : false
+    property string pillColorStyle: barSettings.pillColorStyle !== undefined ? barSettings.pillColorStyle : "solid"
     property bool centerByEdges: barSettings.centerByEdges !== undefined ? barSettings.centerByEdges : true
     property bool autohide: barSettings.autohide !== undefined ? barSettings.autohide : false
     property int autohideTimeout: barSettings.autohideTimeout !== undefined ? barSettings.autohideTimeout : 1000
@@ -704,6 +705,7 @@ GuideTab {
             barTabRoot.barStyle = "modular";
         }
         barTabRoot.distinctPills = ts.distinctPills !== undefined ? ts.distinctPills : false;
+        barTabRoot.pillColorStyle = ts.pillColorStyle !== undefined ? ts.pillColorStyle : "solid";
         barTabRoot.centerByEdges = ts.centerByEdges !== undefined ? ts.centerByEdges : true;
         barTabRoot.autohide = ts.autohide !== undefined ? ts.autohide : false;
         barTabRoot.autohideTimeout = ts.autohideTimeout !== undefined ? ts.autohideTimeout : 1000;
@@ -740,6 +742,7 @@ GuideTab {
         current.height = barTabRoot.currentBarThickness;
         current.style = barTabRoot.barStyle;
         current.distinctPills = barTabRoot.distinctPills;
+        current.pillColorStyle = barTabRoot.pillColorStyle;
         current.centerByEdges = barTabRoot.centerByEdges;
         current.autohide = barTabRoot.autohide;
         current.autohideTimeout = barTabRoot.autohideTimeout;

@@ -55,12 +55,13 @@ BarFaceBase {
 
     readonly property bool isDesktop: !SystemInfo.hasBatSupply
     property string btStatus: isPreview ? "On" : "Off"
-    property string btIcon: isPreview ? "🎧" : "󰂲"
+    property string btIcon: isPreview ? "audio-headphones-symbolic" : "bluetooth-offline"
     property string btDevice: isPreview ? "Headphones" : "Off"
-    property bool isBtOn: isPreview ? true : (btStatus.toLowerCase() === "enabled" || btStatus.toLowerCase() === "on")
+    property bool isBtOn: (btStatus.toLowerCase() === "enabled" || btStatus.toLowerCase() === "on")
     property bool showLayout: (!barWindow || isPreview) ? true : ((!module || module.moduleActive) && barWindow.isStartupReady && barWindow.isDataReady)
     readonly property var btPill: pillLoader.item
-    property bool isConnected: isPreview ? true : false
+    property bool isConnected: false
+    // readonly property bool isActive: isBtOn && isConnected
 
     Component.onCompleted: {
         updateBtData();
@@ -118,20 +119,20 @@ BarFaceBase {
             let iconType = connectedDev.icon || "";
             let typeLower = iconType.toLowerCase();
             let nameLower = name.toLowerCase();
-//// nih gatau
-            let icon = " ";
-            if (typeLower.indexOf("headset") !== -1 || typeLower.indexOf("headphone") !== -1 || nameLower.indexOf("headphone") !== -1 || nameLower.indexOf("buds") !== -1 || nameLower.indexOf("pods") !== -1) icon = "🎧";
-            else if (typeLower.indexOf("audio") !== -1 || typeLower.indexOf("speaker") !== -1 || typeLower.indexOf("card") !== -1 || nameLower.indexOf("speaker") !== -1) icon = "📻";
-            else if (typeLower.indexOf("phone") !== -1 || nameLower.indexOf("phone") !== -1 || nameLower.indexOf("iphone") !== -1 || nameLower.indexOf("android") !== -1) icon = "📱";
-            else if (typeLower.indexOf("mouse") !== -1 || nameLower.indexOf("mouse") !== -1) icon = "󰍽";
-            else if (typeLower.indexOf("keyboard") !== -1 || nameLower.indexOf("keyboard") !== -1) icon = "⌨️";
-            else if (typeLower.indexOf("controller") !== -1 || nameLower.indexOf("controller") !== -1) icon = "🎮";
+
+            let icon = "bluetooth-active-symbolic";
+            if (typeLower.indexOf("headset") !== -1 || typeLower.indexOf("headphone") !== -1 || nameLower.indexOf("headphone") !== -1 || nameLower.indexOf("buds") !== -1 || nameLower.indexOf("pods") !== -1) icon = "audio-headphones-symbolic";
+            else if (typeLower.indexOf("audio") !== -1 || typeLower.indexOf("speaker") !== -1 || typeLower.indexOf("card") !== -1 || nameLower.indexOf("speaker") !== -1) icon = "audio-speakers-symbolic";
+            else if (typeLower.indexOf("phone") !== -1 || nameLower.indexOf("phone") !== -1 || nameLower.indexOf("iphone") !== -1 || nameLower.indexOf("android") !== -1) icon = "phone-symbolic";
+            else if (typeLower.indexOf("mouse") !== -1 || nameLower.indexOf("mouse") !== -1) icon = "input-mouse-symbolic";
+            else if (typeLower.indexOf("keyboard") !== -1 || nameLower.indexOf("keyboard") !== -1) icon = "input-keyboard-symbolic";
+            else if (typeLower.indexOf("controller") !== -1 || nameLower.indexOf("controller") !== -1) icon = "input-gaming-symbolic";
 
             btIcon = icon;
             btDevice = name;
             isConnected = true;
         } else {
-            btIcon = "bluetooth-online";
+            btIcon = "bluetooth-active-symbolic";
             btDevice = "On";
             isConnected = false;
         }
@@ -238,17 +239,17 @@ BarFaceBase {
             width: s(root.isCompact ? 18 : 20)
             height: width
 
-             PanelIcon {
+           PanelIcon {
                 id: textIcon
                 anchors.centerIn: parent
-                // text: root.btIcon
+                icon: root.btIcon
                 // font.family: ThemeBackend.iconFont
-                // font.pixelSize: s(root.isCompact ? 14 : 15)
+                size: s(root.isCompact ? 14 : 15)
                 // horizontalAlignment: Text.AlignHCenter
                 // verticalAlignment: Text.AlignVCenter
                 color: textMouseArea.containsMouse ? Qt.lighter(ThemeBackend.mauve, 1.15) : (root.isBtOn ? ThemeBackend.mauve : ThemeBackend.subtext0)
                 // Behavior on color { ColorAnimation { duration: 150 } }
-            }
+           }
         }
 
         Text {
@@ -275,7 +276,7 @@ BarFaceBase {
         ClickButton {
             id: btPill
             property bool initAnimTrigger: root.showLayout
-            property bool isActive: root.isBtOn
+            property bool isBtOn: root.isBtOn
 
             height: s(root.isCompact ? 28 : 30)
             maxWidth: s(root.isCompact ? 156 : 160)
@@ -286,8 +287,8 @@ BarFaceBase {
             iconFontSize: s(root.isCompact ? 14 : 15)
             buttonText: root.showName ? root.btDevice : ""
             textFontSize: s(root.isCompact ? 11 : 12)
-            accentColor: isActive ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
-            textColor: isActive ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
+            accentColor: root.getPillAccentColor(ThemeBackend.mauve, isBtOn)
+            textColor: root.getPillTextColor(ThemeBackend.mauve, isBtOn)
 
             property real targetWidth: (root.isDesktop || (!root.showIcon && !root.showName)) ? 0 : implicitWidth
             width: targetWidth
@@ -311,10 +312,10 @@ BarFaceBase {
             horizontalPadding: 0
             buttonIcon: root.showIcon ? root.btIcon : ""
             iconFontSize: s(root.isCompact ? 14 : 15)
-            buttonText: (!root.showIcon && root.showName) ? (root.btDevice.length > 3 ? root.btDevice.substring(0, 3) : root.btDevice) : ""
-            textFontSize: s(root.isCompact ? 9 : 10)
-            accentColor: root.isBtOn ? (root.isCompact ? Qt.lighter(ThemeBackend.mauve, 1.08) : ThemeBackend.mauve) : (root.isCompact ? Qt.lighter(ThemeBackend.surface0, 1.18) : ThemeBackend.surface0)
-            textColor: root.isBtOn ? ThemeBackend.base : (root.isCompact ? Qt.lighter(ThemeBackend.text, 1.05) : ThemeBackend.text)
+            // buttonText: (!root.showIcon && root.showName) ? (root.btDevice.length > 3 ? root.btDevice.substring(0, 3) : root.btDevice) : ""
+            // textFontSize: s(root.isCompact ? 19 : 10)
+            accentColor: root.getPillAccentColor(ThemeBackend.mauve, root.isBtOn)
+            textColor: root.getPillTextColor(ThemeBackend.mauve, root.isBtOn)
             onClicked: if (!root.isPreview) PopupController.toggle("network", "bt")
         }
     }

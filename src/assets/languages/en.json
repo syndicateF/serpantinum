@@ -47,7 +47,9 @@
       "screenshot": "Screenshot",
       "theme_appearance": "Appearance",
       "theme_apps": "App theming",
-      "theme_wallpapers": "Wallpapers"
+      "theme_wallpapers": "Wallpapers",
+      "general_main": "General",
+      "general_presets": "Presets"
     },
     "launcher": {
       "position": {
@@ -250,6 +252,21 @@
       "screenshot_on_release": {
         "title": "Capture region on mouse release",
         "desc": "Take the screenshot as soon as you finish dragging, without clicking the shutter"
+      },
+      "presets": {
+        "save": {
+          "title": "Save current setup",
+          "desc": "Save all settings, widgets and wallpapers as a preset",
+          "button": "Save preset"
+        },
+        "empty": "No presets yet. Save your current setup to create one",
+        "confirm": {
+          "title": "Apply preset?",
+          "desc": "Are you sure you want to apply this preset without saving your own settings first? It will override your existing settings, and you won't be able to recover them.",
+          "dont_show": "Do not show me this again",
+          "apply": "Apply",
+          "cancel": "Cancel"
+        }
       }
     },
     "display": {
@@ -410,6 +427,12 @@
         "modular": "Modular",
         "solid": "Solid",
         "fill": "Fill"
+      },
+      "pill_color_style": {
+        "title": "Pill color style",
+        "desc": "Choose between solid fill or tinted translucent accent pills",
+        "solid": "Solid",
+        "tinted": "Tinted"
       },
       "time": {
         "title": "Time format",
@@ -988,10 +1011,6 @@
         "title": "Draw a background behind apps",
         "desc": "Show the dock panel behind app icons"
       },
-      "iconBackground": {
-        "title": "App icon tile background",
-        "desc": "Show individual background tiles behind each dock icon"
-      },
       "transparency": {
         "title": "Dock transparency",
         "desc": "Adjust dock background opacity level"
@@ -1025,10 +1044,6 @@
       "hover_scale": {
         "title": "Hover scale effect",
         "desc": "Magnification level when hovering over dock items"
-      },
-      "hover_lift": {
-        "title": "Hover lift animation",
-        "desc": "Vertical lift height of apps when hovering"
       },
       "cascade_scale": {
         "title": "Scale nearest elements",
@@ -1244,7 +1259,7 @@
     }
   },
   "music": {
-    "nothing_playing": "Nothing is playing",
+    "nothing_playing": "Not playing",
     "loading": "Loading...",
     "by_artist": "By {artist}",
     "unknown_artist": "Unknown artist",
