@@ -114,14 +114,13 @@ Item {
             Sounds.playSfx(sfxFile, 1.0);
         }
 
-        // Kirim via notify-send dengan synchronous replacement tag agar TIDAK NUMPUK
+        // Kirim via serpantinum-core notify (native Serpantinum)
         Quickshell.execDetached([
-            "notify-send",
-            "-a", appName,
-            "-u", urgency,
-            "-i", icon,
-            "-h", "string:x-canonical-private-synchronous:battery",
-            "-h", "int:battery-level:" + level,
+            "serpantinum-core", "notify",
+            "--app", appName,
+            "--urgency", urgency,
+            "--icon", icon,
+            "--",
             title,
             body
         ]);
@@ -133,11 +132,11 @@ Item {
         let body = I18n.t("sysnotif.battery.full_body");
 
         Quickshell.execDetached([
-            "notify-send",
-            "-a", appName,
-            "-u", "normal",
-            "-i", "battery-kind-full",
-            "-h", "string:x-canonical-private-synchronous:battery",
+            "serpantinum-core", "notify",
+            "--app", appName,
+            "--urgency", "normal",
+            "--icon", "battery-kind-full",
+            "--",
             title,
             body
         ]);
@@ -155,10 +154,11 @@ Item {
         }
 
         Quickshell.execDetached([
-            "notify-send",
-            "-a", appName,
-            "-u", u,
-            "-i", ic,
+            "serpantinum-core", "notify",
+            "--app", appName,
+            "--urgency", u,
+            "--icon", ic,
+            "--",
             summary,
             body
         ]);
