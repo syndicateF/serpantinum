@@ -397,10 +397,10 @@ GuideTab {
                     cornerRadius: ThemeBackend.borderRadius
                     onClicked: {
                         Quickshell.execDetached([
-                            "serpantinum-core", "notify",
-                            "--urgency",
-                            "critical",
-                            "--",
+                            "notify-send",
+                            "-a", "Serpantinum",
+                            "-u", "critical",
+                            "-i", "preferences-system-notifications",
                             I18n.t("guide.notifications.test", "Test notification"),
                             I18n.t("guide.notifications.test_desc", "This is a test notification")
                         ]);

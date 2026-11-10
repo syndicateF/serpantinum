@@ -417,12 +417,6 @@
         "solid": "Padat",
         "fill": "Terisi"
       },
-      "pill_color_style": {
-        "title": "Gaya warna pil",
-        "desc": "Pilih antara isian padat (solid) atau aksen transparan berwarna (tinted)",
-        "solid": "Padat",
-        "tinted": "Tinted"
-      },
       "time": {
         "title": "Format waktu",
         "desc": "String format (misalnya HH:mm:ss atau hh:mm AP)"
@@ -1096,13 +1090,13 @@
   },
   "sysnotif": {
     "battery": {
-      "app_name": "Sistem",
-      "full_title": "Baterai penuh",
-      "full_body": "Baterai terisi penuh (100%).",
-      "low_title": "Baterai lemah",
-      "low_body": "Tingkat baterai berada di {pct}%. Silakan sambungkan pengisi daya Anda.",
-      "critical_title": "Baterai kritis",
-      "critical_body": "Tingkat baterai berada di {pct}%. Sambungkan pengisi daya Anda segera."
+      "app_name": "Battery Monitor",
+      "full_title": "Baterai udah full — 100%",
+      "full_body": "Full tank! Cabut chargernya bro, kasian baterai lo udah kenyang banget.",
+      "low_title": "Baterai sekarat nih — {pct}%",
+      "low_body": "Baterai lo udah tiris banget bro. Buruan colok charger sebelum gue ngambek dan mati mendadak!",
+      "critical_title": "Baterai kritis gawat — {pct}%",
+      "critical_body": "Anjay tinggal {pct}%! Colok charger SEKARANG atau pasrah apps lo hilang ditelan bumi."
     }
   },
   "updater": {

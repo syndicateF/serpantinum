@@ -61,6 +61,7 @@ Rectangle {
     function playPopupSound() {
         if (_soundPlayed) return;
         if (!typeRoot.isPopup) return;
+        if (model && model.appName === "Battery Monitor") return;
         if (Math.abs(Date.now() - typeRoot.timestamp) > 3000) return;
         let cfg = Config.getSetting("notifications", { "sound": true, "soundFile": "", "dnd": false });
         if (cfg.dnd === true) return;

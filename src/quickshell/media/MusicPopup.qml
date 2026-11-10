@@ -30,7 +30,7 @@ MusicEqualizerState {
 
     function resetAndPlayIntro() {
         exitAnim.stop();
-        introMain = 1.0;
+        introMain = 0;
         introCover = 0;
         introText = 0;
         introControls = 0;
@@ -385,6 +385,10 @@ MusicEqualizerState {
     Item {
         id: mainWrapper
         anchors.fill: parent
+        
+        scale: 0.92 + (0.08 * popupRoot.introMain)
+        opacity: popupRoot.introMain
+        transform: Translate { y: popupRoot.s(12) * (1 - popupRoot.introMain) }
 
         MusicBorder {
             id: borderLayer
@@ -395,8 +399,14 @@ MusicEqualizerState {
             id: innerBg
             anchors.fill: parent
             anchors.margins: ThemeBackend.liquidGlass ? 0 : popupRoot.s(3)
-            color: "transparent"
+            color: Qt.alpha(ThemeBackend.base, ThemeBackend.elementOpacity)
             radius: ThemeBackend.borderRadius
+
+            WallpaperBlur {
+                z: -1
+                anchors.fill: parent
+                radius: parent.radius
+            }
 
             Rectangle {
                 id: innerBgMask

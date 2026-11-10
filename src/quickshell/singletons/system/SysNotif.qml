@@ -1,218 +1,230 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.UPower
 import "../../"
 
 Item {
     id: root
 
-    readonly property bool hasBattery: Boolean(UPower.displayDevice.ready && UPower.displayDevice.isLaptopBattery && UPower.displayDevice.isPresent)
-    readonly property bool isDesktop: UPower.displayDevice.ready ? !root.hasBattery : (typeof SystemInfo !== "undefined" ? SystemInfo.isDesktop : true)
-    readonly property int batteryPercentage: (UPower.displayDevice.ready && root.hasBattery) ? Math.round(UPower.displayDevice.percentage * 100) : 0
-    readonly property bool isCharging: root.hasBattery && UPower.displayDevice.ready && (UPower.displayDevice.state === UPowerDeviceState.Charging || UPower.displayDevice.state === UPowerDeviceState.FullyCharged)
-    readonly property string stateFilePath: {
-        let base = (typeof Caching !== "undefined" && Caching.runDir) ? Caching.runDir : "/tmp/serpantinum";
-        return base + "/battery_notif_state.json";
+    // ─── UPOWER NATIVE BINDINGS ─────────────────────────────────────────────
+    readonly property var battery: UPower.displayDevice
+    readonly property bool hasBattery: Boolean(root.battery && root.battery.ready && root.battery.isPresent && (root.battery.isLaptopBattery || root.battery.type === UPowerDeviceType.Battery))
+    
+    // Konversi aman 0.0 - 1.0 atau 0 - 100
+    readonly property int batteryPercentage: {
+        if (!root.battery || !root.battery.ready) return 100;
+        let raw = root.battery.percentage;
+        return raw > 1.0 ? Math.floor(raw) : Math.floor(raw * 100);
     }
 
-    property bool stateLoaded: false
+    readonly property bool isCharging: {
+        if (!root.battery || !root.battery.ready) return false;
+        let s = root.battery.state;
+        return s === UPowerDeviceState.Charging ||
+               s === UPowerDeviceState.FullyCharged ||
+               s === UPowerDeviceState.PendingCharge;
+    }
+
+    // ─── THRESHOLDS & STATE ──────────────────────────────────────────────────
+    readonly property var thresholds: [20, 10, 5]
+    property int lastNotifiedLevel: 0
+    property int lastState: -1
     property bool initialized: false
-    property int lastPercentage: -1
     property bool notifiedFull: false
-    property bool notifiedLow: false
-    property bool notifiedCritical: false
-    property real lastNotifTime: 0
-    property string lastNotifType: ""
 
-    onHasBatteryChanged: {
-        if (!root.hasBattery) {
-            root.notifiedFull = false;
-            root.notifiedLow = false;
-            root.notifiedCritical = false;
+    // ─── EVALUASI LEVEL BATERAI ─────────────────────────────────────────────
+    function evaluateBattery() {
+        if (!root.hasBattery || !root.battery.ready) return;
+
+        let pct = root.batteryPercentage;
+        let state = root.battery.state;
+
+        // Saat charging: reset status low battery & cek apakah baterai sudah penuh
+        if (root.isCharging) {
+            root.resetBatteryState();
+
+            if ((pct >= 100 || state === UPowerDeviceState.FullyCharged) && !root.notifiedFull) {
+                root.notifiedFull = true;
+                root.sendFullBatteryNotification();
+            } else if (pct < 100 && state !== UPowerDeviceState.FullyCharged) {
+                root.notifiedFull = false;
+            }
+            return;
         }
-        root.checkBattery();
-    }
-    onIsDesktopChanged: root.checkBattery()
 
-    FileView {
-        id: stateFileView
-        path: root.stateFilePath
-        watchChanges: false
-        onLoaded: {
-            root.loadState();
+        // Saat discharging: reset flag notifiedFull
+        root.notifiedFull = false;
+
+        if (state !== UPowerDeviceState.Discharging) return;
+
+        // Cari threshold tertinggi yang terkena
+        let targetLevel = 0;
+        for (let i = root.thresholds.length - 1; i >= 0; i--) {
+            if (pct <= root.thresholds[i]) {
+                targetLevel = root.thresholds[i];
+                break;
+            }
         }
+
+        if (targetLevel === 0) {
+            // Persentase naik di atas threshold normal (misal 25%)
+            if (pct > 25) root.lastNotifiedLevel = 0;
+            return;
+        }
+
+        // Anti-spam & anti fluktuasi: jika sudah dinotif di level ini atau level lebih kritis, jangan notif lagi
+        if (root.lastNotifiedLevel !== 0 && targetLevel >= root.lastNotifiedLevel) {
+            return;
+        }
+
+        root.sendLowBatteryNotification(targetLevel, pct);
+        root.lastNotifiedLevel = targetLevel;
     }
 
-    function loadState() {
-        try {
-            let txt = typeof stateFileView.text === "function" ? stateFileView.text() : stateFileView.text;
-            if (txt && txt.trim().length > 0) {
-                let data = JSON.parse(txt);
-                if (data && typeof data === "object") {
-                    if (data.notifiedFull !== undefined) root.notifiedFull = Boolean(data.notifiedFull);
-                    if (data.notifiedLow !== undefined) root.notifiedLow = Boolean(data.notifiedLow);
-                    if (data.notifiedCritical !== undefined) root.notifiedCritical = Boolean(data.notifiedCritical);
-                    if (data.lastPercentage !== undefined) root.lastPercentage = Number(data.lastPercentage);
-                    if (data.lastNotifTime !== undefined) root.lastNotifTime = Number(data.lastNotifTime);
-                    if (data.lastNotifType !== undefined) root.lastNotifType = String(data.lastNotifType);
-                    root.stateLoaded = true;
+    function resetBatteryState() {
+        root.lastNotifiedLevel = 0;
+
+        // Bersihkan popup low battery yang masih nyangkut di NotificationManager
+        if (typeof NotificationManager !== "undefined" && NotificationManager.activePopupsModel) {
+            for (let i = NotificationManager.activePopupsModel.count - 1; i >= 0; i--) {
+                let item = NotificationManager.activePopupsModel.get(i);
+                if (item && (item.appName === "Battery Monitor" || (item.summary && item.summary.indexOf("Battery") !== -1))) {
+                    NotificationManager.removePopup(item.uid);
                 }
             }
-        } catch (e) {}
-    }
-
-    function saveState() {
-        let payload = JSON.stringify({
-            "notifiedFull": root.notifiedFull,
-            "notifiedLow": root.notifiedLow,
-            "notifiedCritical": root.notifiedCritical,
-            "lastPercentage": root.lastPercentage,
-            "lastNotifTime": root.lastNotifTime,
-            "lastNotifType": root.lastNotifType
-        });
-        stateFileWriter.setText(payload + "\n");
-    }
-
-    FileView {
-        id: stateFileWriter
-        path: root.stateFilePath
-    }
-
-    function sendNotification(type, summary, body, icon, urgency) {
-        let now = Date.now();
-        if (root.lastNotifType === type && (now - root.lastNotifTime < 60000)) {
-            return;
         }
-        if (now - root.lastNotifTime < 3000) {
-            return;
-        }
-        root.lastNotifType = type;
-        root.lastNotifTime = now;
-        root.saveState();
+    }
 
-        let u = urgency ? urgency : "normal";
-        let ic = icon ? icon : "battery";
+    // ─── NOTIFIKASI & SOUND DISPATCHER ──────────────────────────────────────
+    function sendLowBatteryNotification(level, currentPct) {
+        let isCrit = level <= 5;
+        let urgency = isCrit ? "critical" : "normal";
+        let icon = isCrit ? "battery-empty-symbolic" : (level <= 10 ? "battery-low-symbolic" : "battery-caution-symbolic");
+
         let appName = I18n.t("sysnotif.battery.app_name");
-        if (appName === "sysnotif.battery.app_name") appName = "System";
+        let tKey = isCrit ? "sysnotif.battery.critical_title" : "sysnotif.battery.low_title";
+        let bKey = isCrit ? "sysnotif.battery.critical_body" : "sysnotif.battery.low_body";
+        let title = I18n.t(tKey, { "pct": level });
+        let body = I18n.t(bKey, { "pct": currentPct });
+
+        // Bunyikan peringatan suara baterai spesifik
+        if (typeof Sounds !== "undefined") {
+            let sfxFile = isCrit ? "battery/lowbatcrit.wav" : "battery/lowbat.wav";
+            Sounds.playSfx(sfxFile, 1.0);
+        }
+
+        // Kirim via notify-send dengan synchronous replacement tag agar TIDAK NUMPUK
         Quickshell.execDetached([
-            "serpantinum-core", "notify",
-            "--app", appName,
-            "--urgency", u,
-            "--icon", ic,
-            "--",
+            "notify-send",
+            "-a", appName,
+            "-u", urgency,
+            "-i", icon,
+            "-h", "string:x-canonical-private-synchronous:battery",
+            "-h", "int:battery-level:" + level,
+            title,
+            body
+        ]);
+    }
+
+    function sendFullBatteryNotification() {
+        let appName = I18n.t("sysnotif.battery.app_name");
+        let title = I18n.t("sysnotif.battery.full_title");
+        let body = I18n.t("sysnotif.battery.full_body");
+
+        Quickshell.execDetached([
+            "notify-send",
+            "-a", appName,
+            "-u", "normal",
+            "-i", "battery-full-charged",
+            "-h", "string:x-canonical-private-synchronous:battery",
+            title,
+            body
+        ]);
+    }
+
+    // ─── GENERIC SYSTEM NOTIFICATION HELPER ─────────────────────────────────
+    // Bisa digunakan oleh komponen sistem lain jika butuh kirim notif sistem
+    function sendNotification(summary, body, icon, urgency) {
+        let u = urgency ? urgency : "normal";
+        let ic = icon ? icon : "dialog-information";
+        let appName = "System";
+        if (typeof I18n !== "undefined" && I18n.isReady) {
+            let a = I18n.t("sysnotif.battery.app_name");
+            if (a !== "sysnotif.battery.app_name") appName = a;
+        }
+
+        Quickshell.execDetached([
+            "notify-send",
+            "-a", appName,
+            "-u", u,
+            "-i", ic,
             summary,
             body
         ]);
     }
 
+    // Public method yang dipanggil di Shell.qml
     function checkBattery() {
-        if (!root.hasBattery || root.isDesktop || !UPower.displayDevice.ready || (typeof I18n !== "undefined" && !I18n.isReady)) return;
-
-        if (!root.stateLoaded) {
-            root.loadState();
-        }
-
-        let pct = root.batteryPercentage;
-        let state = UPower.displayDevice.state;
-        let charging = state === UPowerDeviceState.Charging || state === UPowerDeviceState.FullyCharged;
-
-        if (!root.initialized) {
-            root.initialized = true;
-            if (!root.stateLoaded) {
-                root.lastPercentage = pct;
-                if (pct >= 100) {
-                    root.notifiedFull = true;
-                }
-                root.saveState();
-            } else {
-                if (pct >= 100 && (root.lastPercentage >= 100 || root.lastPercentage === -1)) {
-                    root.notifiedFull = true;
-                }
-            }
-        }
-
-        if (pct < 100) {
-            root.notifiedFull = false;
-        }
-
-        if (charging) {
-            if (pct > 20) {
-                root.notifiedLow = false;
-                root.notifiedCritical = false;
-            }
-
-            if ((pct >= 100 || state === UPowerDeviceState.FullyCharged) && !root.notifiedFull && root.lastPercentage < 100) {
-                let title = I18n.t("sysnotif.battery.full_title");
-                let body = I18n.t("sysnotif.battery.full_body");
-                if (title === "sysnotif.battery.full_title" || body === "sysnotif.battery.full_body") return;
-                root.notifiedFull = true;
-                root.sendNotification(
-                    "full",
-                    title,
-                    body,
-                    "battery-full-charged",
-                    "normal"
-                );
-            }
-        } else {
-            if (pct <= 5) {
-                if (!root.notifiedCritical) {
-                    let title = I18n.t("sysnotif.battery.critical_title");
-                    let body = I18n.t("sysnotif.battery.critical_body", { "pct": pct.toString() });
-                    if (title === "sysnotif.battery.critical_title") return;
-                    root.notifiedCritical = true;
-                    root.notifiedLow = true;
-                    root.sendNotification(
-                        "critical",
-                        title,
-                        body,
-                        "battery-level-0-symbolic",
-                        "critical"
-                    );
-                }
-            } else if (pct <= 20) {
-                if (!root.notifiedLow) {
-                    let title = I18n.t("sysnotif.battery.low_title");
-                    let body = I18n.t("sysnotif.battery.low_body", { "pct": pct.toString() });
-                    if (title === "sysnotif.battery.low_title") return;
-                    root.notifiedLow = true;
-                    root.sendNotification(
-                        "low",
-                        title,
-                        body,
-                        "battery-level-20-symbolic",
-                        "critical"
-                    );
-                }
-            } else if (pct > 25) {
-                root.notifiedLow = false;
-                root.notifiedCritical = false;
-            }
-        }
-
-        if (pct !== root.lastPercentage) {
-            root.lastPercentage = pct;
-            root.saveState();
-        }
+        root.evaluateBattery();
     }
 
+    // ─── REACTIVE LISTENERS ─────────────────────────────────────────────────
     Connections {
-        target: (typeof I18n !== "undefined") ? I18n : null
-        function onLanguageChanged() { root.checkBattery(); }
-    }
+        target: root.battery ? root.battery : null
 
-    Connections {
-        target: UPower.displayDevice
-        function onPercentageChanged() { root.checkBattery(); }
-        function onStateChanged() { root.checkBattery(); }
-        function onReadyChanged() { root.checkBattery(); }
-        function onIsPresentChanged() { root.checkBattery(); }
-        function onIsLaptopBatteryChanged() { root.checkBattery(); }
+        function onReadyChanged() {
+            if (root.battery && root.battery.ready && !root.initialized) {
+                root.initialized = true;
+                root.lastState = root.battery.state;
+                root.evaluateBattery();
+            }
+        }
+
+        function onPercentageChanged() {
+            root.evaluateBattery();
+        }
+
+        function onStateChanged() {
+            if (!root.battery || !root.battery.ready) return;
+
+            let state = root.battery.state;
+            let oldState = root.lastState;
+            root.lastState = state;
+
+            if (oldState !== -1 && oldState !== state) {
+                let wasCharging = (oldState === UPowerDeviceState.Charging ||
+                                   oldState === UPowerDeviceState.FullyCharged ||
+                                   oldState === UPowerDeviceState.PendingCharge);
+                let isNowCharging = (state === UPowerDeviceState.Charging ||
+                                     state === UPowerDeviceState.FullyCharged ||
+                                     state === UPowerDeviceState.PendingCharge);
+
+                // Play sound saat dicolok / dicabut charger
+                if (!wasCharging && isNowCharging) {
+                    if (typeof Sounds !== "undefined") {
+                        Sounds.playSfx("battery/charge.wav", 0.9);
+                    }
+                    root.resetBatteryState();
+                } else if (wasCharging && !isNowCharging) {
+                    let pct = root.batteryPercentage;
+                    let isLow = pct <= root.thresholds[0]; // 20% atau lebih rendah
+                    // Prioritas: Jika baterai sudah low saat dicabut, mute sound discharge
+                    // agar tidak tabrakan dengan sound low battery yang jauh lebih urgent!
+                    if (!isLow && typeof Sounds !== "undefined") {
+                        Sounds.playSfx("battery/discharge.wav", 0.9);
+                    }
+                    root.evaluateBattery();
+                }
+            }
+        }
     }
 
     Component.onCompleted: {
-        root.loadState();
+        if (root.battery && root.battery.ready) {
+            root.initialized = true;
+            root.lastState = root.battery.state;
+            root.evaluateBattery();
+        }
     }
 }

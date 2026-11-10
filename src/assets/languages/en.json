@@ -428,12 +428,6 @@
         "solid": "Solid",
         "fill": "Fill"
       },
-      "pill_color_style": {
-        "title": "Pill color style",
-        "desc": "Choose between solid fill or tinted translucent accent pills",
-        "solid": "Solid",
-        "tinted": "Tinted"
-      },
       "time": {
         "title": "Time format",
         "desc": "Format string (e.g. HH:mm:ss or hh:mm AP)"
@@ -1126,13 +1120,13 @@
   },
   "sysnotif": {
     "battery": {
-      "app_name": "System",
-      "full_title": "Battery full",
-      "full_body": "Battery is fully charged (100%).",
-      "low_title": "Battery low",
-      "low_body": "Battery level is at {pct}%. Please connect your charger.",
-      "critical_title": "Battery critical",
-      "critical_body": "Battery level is at {pct}%. Connect your charger immediately."
+      "app_name": "Battery Monitor",
+      "full_title": "Battery full — 100%",
+      "full_body": "Full tank! Unplug the charger bro, battery is stuffed to the max.",
+      "low_title": "Low battery — {pct}%",
+      "low_body": "Your battery is getting low. Don't make me warn you again.",
+      "critical_title": "Critical battery — {pct}%",
+      "critical_body": "Oh wow, {pct}%. Didn't see that coming. Tell my apps I loved them."
     }
   },
   "updater": {
@@ -1263,7 +1257,7 @@
     }
   },
   "music": {
-    "nothing_playing": "Not playing",
+    "nothing_playing": "Nothing is playing",
     "loading": "Loading...",
     "by_artist": "By {artist}",
     "unknown_artist": "Unknown artist",
