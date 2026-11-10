@@ -100,7 +100,7 @@ Item {
     function sendLowBatteryNotification(level, currentPct) {
         let isCrit = level <= 5;
         let urgency = isCrit ? "critical" : "normal";
-        let icon = isCrit ? "battery-empty-symbolic" : (level <= 10 ? "battery-low-symbolic" : "battery-caution-symbolic");
+        let icon = isCrit ? "battery-kind-critical" : "battery-kind-low";
 
         let appName = I18n.t("sysnotif.battery.app_name");
         let tKey = isCrit ? "sysnotif.battery.critical_title" : "sysnotif.battery.low_title";
@@ -136,7 +136,7 @@ Item {
             "notify-send",
             "-a", appName,
             "-u", "normal",
-            "-i", "battery-full-charged",
+            "-i", "battery-kind-full",
             "-h", "string:x-canonical-private-synchronous:battery",
             title,
             body
