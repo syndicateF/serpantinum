@@ -110,7 +110,6 @@ show_help() {
     echo "  location                     $(t "cli.scripts.location")"
     echo "  screenshot                   $(t "cli.scripts.screenshot")"
     echo "  brightness                   $(t "cli.scripts.brightness")"
-    echo "  monitors_detect              $(t "cli.scripts.monitors_detect")"
     echo "  location_manual              $(t "cli.scripts.location_manual")"
     echo "  gamma                        $(t "cli.scripts.gamma")"
     echo ""
@@ -244,6 +243,9 @@ stop_daemon() {
     if [ -n "$MAIN_QML" ]; then
         pkill -KILL -f "quickshell.*$MAIN_QML" 2>/dev/null
     fi
+    bash "$SERPANTINUM_DIR/scripts/gamma.sh" stop >/dev/null 2>&1
+    command -v serpantinum-core >/dev/null 2>&1 && serpantinum-core quit >/dev/null 2>&1
+    command -v serpantinum-audio >/dev/null 2>&1 && serpantinum-audio ctl quit >/dev/null 2>&1
 
     rm -f "/tmp/serpantinumd.pid" 2>/dev/null
     rm -f "/tmp/serpantinumd.lock" 2>/dev/null
@@ -374,11 +376,10 @@ cli_theme_find() {
 }
 
 cli_monitors() {
-    local script="$SERPANTINUM_DIR/scripts/monitors_detect.sh"
     if [[ "$1" == "--json" ]]; then
-        "$script" --verbose | jq -Rn '[inputs | split("|") | (.[1] | split("x")) as $res | {name: .[0], width: ($res[0] | tonumber? // null), height: ($res[1] | tonumber? // null), refreshRate: (.[2] | tonumber? // null)}]'
+        serpantinum-core monitors | jq '[.[] | {name, width, height, refreshRate}]'
     else
-        "$script"
+        serpantinum-core monitors | jq -r '.[].name'
     fi
 }
 
@@ -787,7 +788,6 @@ ALLOWED_SCRIPTS=(
     "weather"
     "location"
     "screenshot"
-    "monitors_detect"
     "location_manual"
     "gamma"
 )

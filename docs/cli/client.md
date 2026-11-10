@@ -90,6 +90,8 @@ Sends raw IPC calls directly to the running shell:
   - `ipc call main clearNotifications`: Purge all notification popups and history.
   - `ipc call lock activate`: Trigger lock screen immediately.
   - `ipc call screenshotOverlay toggle [args...]`: Toggle interactive screenshot overlay.
+  - `ipc call floating toggle`: Open the quick actions panel on the last used tab, or close it if it is open on any screen. Bind it to a key in your compositor, e.g. Hyprland: `hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("serpantinum ipc call floating toggle"))`.
+  - `ipc call floating open` / `close`: Open the panel on the screen under the cursor, or close it on every screen. Opened this way, it stays until closed, Escape is pressed, or the pointer enters and leaves it.
 
 ### `kill`
 
@@ -235,13 +237,6 @@ Controls color temperature and the day/night schedule through [serpantinum-gamma
 - `serpantinum gamma start`: Start serpantinum-gamma if it is not running.
 - `serpantinum gamma stop`: Stop serpantinum-gamma.
 - `serpantinum gamma --verbose` (`-v`): Print verbose output with current Kelvin, brightness and schedule state.
-
-### `monitors_detect`
-
-Queries active display outputs:
-
-- `serpantinum monitors_detect`: List connected display names line-by-line.
-- `serpantinum monitors_detect --verbose`: Output display specifications (`<name>|<resolution>|<refresh_rate>`).
 
 ### `lock`
 

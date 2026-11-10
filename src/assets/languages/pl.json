@@ -453,7 +453,8 @@
       "no_wallpapers_found": "Nie znaleziono tapet",
       "videos": "Wideo",
       "history": "Ostatnio zastosowane",
-      "favorites": "Ulubione"
+      "favorites": "Ulubione",
+      "recently_added": "Ostatnio dodane"
     },
     "filters": {
       "all": "Wszystkie",
@@ -688,7 +689,6 @@
       "location": "Pobierz i zaktualizuj współrzędne geograficzne",
       "screenshot": "Przechwytuj obrazy ekranu, nagrywaj wideo lub skanuj kody QR",
       "brightness": "Dostosuj jasność podświetlenia ekranu",
-      "monitors_detect": "Wykryj aktywne ekrany i częstotliwości odświeżania",
       "location_manual": "Ręcznie ustaw współrzędne geograficzne i strefę czasową",
       "gamma": "Dostosuj temperaturę barwową i automatyczny harmonogram dzień/noc",
       "translate": "Błyskawiczny tłumacz tekstu i zaznaczenia",
@@ -1002,7 +1002,7 @@
       "warning_command": {
         "title": "Polecenie ostrzegawcze",
         "desc": "Przesunięcie czasowe i polecenie do wykonania przed akcją",
-        "placeholder": "np. notify-send 'ostrzeżenie'"
+        "placeholder": "np. serpantinum-core notify 'ostrzeżenie'"
       },
       "before_command": {
         "title": "Polecenie poprzedzające",
@@ -1012,7 +1012,7 @@
       "resume_command": {
         "title": "Polecenie wznowienia",
         "desc": "Wykonywane po wznowieniu aktywności przez użytkownika",
-        "placeholder": "np. notify-send 'wznowiono'"
+        "placeholder": "np. serpantinum-core notify 'wznowiono'"
       },
       "dim": {
         "title": "Przyciemnij ekran",
@@ -1199,7 +1199,7 @@
     },
     "bar": {
       "modules": {
-        "vis": "Wizualizator (cava)",
+        "vis": "Wizualizator",
         "actions": "Akcje",
         "workspaces": {
           "style": {
@@ -1545,6 +1545,10 @@
           "swipe": {
             "name": "Przesunięcie",
             "desc": "Przesuń przez ekran od krawędzi lub rogu"
+          },
+          "paint": {
+            "name": "Farba",
+            "desc": "Maluj nową tapetę komórka po komórce z kolonii rosnących na ekranie"
           },
           "orientation": {
             "title": "Orientacja",
