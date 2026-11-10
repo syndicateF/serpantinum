@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import "widgets"
 import "notifications/weather"
 import "notifications/battery"
+import ".."
 
 ShellRoot {
     readonly property bool performanceMode: !!(Config.getSetting("general", {}).performance)
@@ -101,4 +102,3 @@ ShellRoot {
         WeatherAlerts.isQuietNow();
         GovAlerts.refresh();
     }
-}

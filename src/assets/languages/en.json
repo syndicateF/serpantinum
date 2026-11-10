@@ -1355,7 +1355,7 @@
     }
   },
   "music": {
-    "nothing_playing": "Nothing is playing",
+    "nothing_playing": "Not Playing",
     "loading": "Loading...",
     "by_artist": "By {artist}",
     "unknown_artist": "Unknown artist",
